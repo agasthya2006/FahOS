@@ -1,7 +1,7 @@
 /**
  * FahOS Autonomous Browser Controller (Native Node.js & Electron)
  * Powered by Gemini 3.1 Flash-Lite.
- * Guarantees 100% accurate results on YouTube, Wikipedia, Amazon, Google, and generic websites.
+ * Orchestrates browser automation, query execution, and intelligent web summarization.
  */
 const fs = require('fs');
 const path = require('path');
@@ -74,7 +74,6 @@ class AgentBrowserController {
   }
 
   resolveTargetPlan(taskText) {
-    const lower = taskText.toLowerCase();
     const query = this.extractCleanQuery(taskText);
 
     // 1. YouTube

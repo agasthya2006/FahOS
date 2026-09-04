@@ -19,3 +19,13 @@ Thumbs.db
 Desktop.ini
 *.log
 
+# Build artifacts & packages
+dist/
+out/
+build/
+*.asar
+
+# User profiles & caches
+.fahos/
+*.tmp
+fahos_action_*.ps1

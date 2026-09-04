@@ -3,6 +3,8 @@
    Smooth Rounded Edges · Ambient Twinkle · Premium UX
    ========================================================= */
 
+@import url("shared/theme.css");
+
 :root {
   --bg-widget: rgba(14, 14, 18, 0.88);
   --bg-bubble: rgba(255, 255, 255, 0.045);
@@ -966,14 +968,6 @@ html, body {
 }
 
 /* View Switching - Exact Matching Ratio */
-.chat-view {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-height: 0;
-}
-
 .chat-view.hidden, .history-view.hidden, .phonebook-view.hidden {
   display: none !important;
 }

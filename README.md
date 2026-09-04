@@ -1,247 +1,306 @@
-# FahOS — AI Operating Layer for Windows
-
 <div align="center">
 
-![FahOS Banner](src/renderer/assets/logo.png)
+# ✦ FahOS ✦
+### Native Windows AI Operating Layer & Autonomous Desktop Agent
+*See → Understand → Act → Verify*
 
-**Desktop Intelligence • Multimodal Vision • Voice Processing • Native Windows Integration**
-
-[![Platform: Windows](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-0078D6?logo=windows)](https://microsoft.com/windows)
-[![Electron: 31.x](https://img.shields.io/badge/Electron-31.x-47848F?logo=electron)](https://electronjs.org)
-[![Featherless AI](https://img.shields.io/badge/Featherless%20AI-Qwen%202.5-8A2BE2)](https://featherless.ai)
-[![Google Gemini](https://img.shields.io/badge/Google-Gemini%20Flash-4285F4?logo=google)](https://aistudio.google.com)
-[![Architecture: Blueprint](https://img.shields.io/badge/Architecture-System%20Blueprint-00E5FF)](ARCHITECTURE.md)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%20%7C%2011-blue?style=flat-square&logo=windows)](https://microsoft.com/windows)
+[![Electron](https://img.shields.io/badge/Electron-31.0.0-47848F?style=flat-square&logo=electron)](https://www.electronjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python)](https://python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 </div>
 
 ---
 
-## 🌟 Overview
+## 1. What is FahOS?
 
-**FahOS** is an intelligent, floating spatial AI operating layer for Windows. Designed with an ultra-sleek translucent glassmorphism HUD, FahOS seamlessly fuses **Google Gemini**'s multimodal perception (vision & high-fidelity audio transcription) with **Featherless AI**'s specialized open-source model cluster (`Qwen2.5-Coder-32B`, `Qwen2.5-32B`, `Qwen2.5-7B`) to control your desktop, analyze your screen, execute system automation, and handle complex queries.
+**FahOS** is an autonomous desktop operating layer for Windows that integrates ambient artificial intelligence into everyday computing. Operating as a frameless, transparent glassmorphism HUD, FahOS allows users to interact with their system through text, voice, or screen snipping.
+
+Unlike generic chatbots, FahOS is directly wired to the operating system:
+- **0ms Intent Fast-Paths**: Instantly launches apps, navigates directories, adjusts volume, manages media, opens Spotify, or launches WhatsApp/Gmail deep-links without making external LLM calls.
+- **Vision-Aware**: Snips screen areas and analyzes code errors, UI layouts, and diagrams using Google Gemini multimodal vision.
+- **Autonomous Web Navigation**: Executes browser tasks (on YouTube, Wikipedia, Amazon, Google) inside a dedicated 94% display size viewport using Playwright and Chromium.
+- **Deep Reasoning**: Routes complex queries to Featherless AI (Qwen 2.5 32B / 7B) with deterministic intent routing and error recovery.
 
 ---
 
-## 🔄 Total Workflow: How Featherless AI and Google Work Together
-
-FahOS adopts a specialized multi-engine architecture where each AI engine excels at its core strength. Detailed technical specifications, data models, and sequence flows are documented in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+## 2. System Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Inputs["1. Multimodal Desktop Inputs"]
-        A1["🎤 Voice Input (Microphone)"]
-        A2["✂️ Screen Snip (Ctrl+Shift+M)"]
-        A3["⌨️ Text Prompt / Query"]
+graph TB
+    subgraph Client["Desktop Presentation Layer"]
+        HUD["HUD Floating Overlay<br/>(index.html / app.js)"]
+        Snip["Screen Snipper<br/>(snip.html / snip.js)"]
+        Browser["Unified Browser Window<br/>(agentBrowser.html)"]
     end
 
-    subgraph Perception["2. Google Gemini Perception Layer"]
-        B1["16kHz Mono PCM WAV Encoder"]
-        B2["Google Gemini Flash Audio API<br/>(High-Accuracy Audio Transcription)"]
-        B3["Google Gemini Vision API<br/>(Spatial Screenshot & OCR Analysis)"]
+    subgraph MainProcess["Electron Main Process & IPC"]
+        Main["Main Entry (main.js)"]
+        Preload["Preload Bridge (preload.js)"]
+        Contacts["Contacts Directory (contactsService.js)"]
     end
 
-    subgraph Refinement["3. Transcript Polishing & Review"]
-        C1["Featherless AI (Qwen2.5-7B-Instruct)<br/>• Strips filler words (um, uh)<br/>• Normalizes tech commands & syntax<br/>• Question Guardrail (Never answers prematurely)"]
-        C2["Chat Input Box<br/>• User reviews & edits transcript<br/>• Attached Image Snippet Pill displayed"]
+    subgraph AgentCore["Agent Orchestration Engine"]
+        Engine["Agent Engine (agent.js)"]
+        Router["Model Router (router.js)"]
+        Sanitize["Security Sanitizer (sanitize.js)"]
+        SysActions["Unified System Actions (systemActions.js)"]
+        Vision["Vision Sensor (vision_sensor.js)"]
+        Voice["Voice Service (voice_service.js)"]
+        Featherless["Featherless Client (featherless.js)"]
     end
 
-    subgraph Orchestration["4. Intelligence & Router Layer"]
-        D1["Model Router (src/core/router.js)<br/>Classifies intent: Coding, Reasoning, Vision, Fastpath"]
-        D2["Featherless AI Qwen2.5-Coder-32B<br/>(Coding, PowerShell, Scripts)"]
-        D3["Featherless AI Qwen2.5-32B<br/>(Complex Planning & Deep Reasoning)"]
-        D4["Featherless AI Qwen2.5-7B<br/>(General Tasks & Fast Chat)"]
+    subgraph BackendServices["Autonomous Services & External APIs"]
+        PyDaemon["Browser Daemon (:8484)<br/>(FastAPI + browser-use)"]
+        FeatherlessAPI["Featherless AI API<br/>(Qwen 2.5 32B / 7B)"]
+        GeminiAPI["Google Gemini API<br/>(3.1 Flash-Lite / 3.5 Flash)"]
+        GroqAPI["Groq Whisper API<br/>(large-v3-turbo)"]
+        WinShell["Windows OS & Shell<br/>(PowerShell, COM, Shell)"]
     end
 
-    subgraph Execution["5. Windows System & Browser Execution"]
-        E1["System Actions Engine<br/>• App Lifecycle (VS Code, Notepad, etc.)<br/>• File Explorer & Folder Navigation<br/>• Safe Recycle Bin Deletion<br/>• Native Audio & Media Controls"]
-        E2["🌐 Autonomous Unified Browser Engine<br/>• 94% Display Size Rounded Window<br/>• Real-Time Step HUD & Element Highlighting<br/>• Multi-Platform Extraction (YouTube, Wikipedia, Amazon, Google)<br/>• Gemini 3.1 Flash-Lite Factual Synthesizer"]
-        E3["Collapsible Chat History & UI Feedback"]
-    end
+    HUD <-->|IPC fahosAPI| Preload <--> Main
+    Snip <-->|IPC snip-confirm| Preload
+    Browser <-->|IPC fahosAgent| Main
 
-    %% Voice flow
-    A1 --> B1 --> B2 --> C1 --> C2
-    %% Snip flow
-    A2 --> B3 --> C2
-    %% Text prompt
-    A3 --> C2
+    Main --> Engine
+    Main --> Contacts
+    Engine --> Router
+    Engine --> SysActions
+    Engine --> Vision
+    Engine --> PyDaemon
 
-    %% Routing
-    C2 --> D1
-    D1 -->|Coding & Shell| D2
-    D1 -->|Complex Reasoning| D3
-    D1 -->|General Queries| D4
-    D1 -->|Web / Search / Lookups| E2
-    D1 -->|Local System Tasks| E1
+    SysActions --> Sanitize
+    SysActions --> WinShell
 
-    %% Action & Response
-    D2 --> E1
-    D3 --> E1
-    D4 --> E1
-    E1 --> E3
-    E2 --> E3
-```
-
-### 1. The Voice Pipeline (Option 2 Architecture)
-- **Audio Capture**: Captures microphone audio using the HTML5 `MediaRecorder` API and converts it into a high-fidelity 16kHz mono 16-bit PCM WAV stream.
-- **Speech-to-Text**: Transcribes audio using **Google Gemini Flash Audio** (with automatic fallback to Groq Whisper if configured) for unmatched transcription accuracy.
-- **Transcript Polishing**: The raw transcript passes through **Featherless AI (`Qwen2.5-7B-Instruct`)** with a few-shot normalization prompt. It eliminates vocal hesitations (`um`, `uh`, `like`), fixes tech terms (`"power shell"` → `PowerShell`, `"git commit minus m"` → `git commit -m`), while enforcing strict **Question Guardrails** so questions are never answered prematurely.
-- **Human-in-the-Loop Review**: The cleaned prompt populates the input field, allowing the user to review, edit, or adjust before sending manually.
-
-### 2. The Vision & Screen Snip Pipeline
-- **Interactive Region Capture (`Ctrl+Shift+M`)**: An ultra-responsive desktop overlay allows clicking and dragging to snip any area of the screen.
-- **Attachment Pill Badge**: The snip instantly appears inside the prompt bubble as an emerald glassmorphism pill badge (`[ 🖼️ Thumbnail | Snipped Region | ✕ ]`), while setting the placeholder to `"Ask a question about this snip, or press Enter/Send..."`.
-- **Visual Understanding**: **Google Gemini Vision** ingests the base64 screenshot to read code, extract text, debug error dialogues, or analyze graphics.
-
-### 3. The Orchestration & Execution Layer
-- **Featherless Model Router**: Dynamic classification matches prompts to specialized open weights:
-  - `Qwen/Qwen2.5-Coder-32B-Instruct` for PowerShell commands, scripts, and programming tasks.
-  - `Qwen/Qwen2.5-32B-Instruct` for heavy reasoning, multi-step problem solving, and analysis.
-  - `Qwen/Qwen2.5-7B-Instruct` for rapid conversational responses and formatting.
-- **System Actions**: Directly launches native Windows applications, opens file directories, runs searches, and controls media.
-
-### 4. Autonomous Unified Browser Engine
-- **94% Large-Screen Viewport**: Opens in a dedicated 94% display width window (`agentBrowserWindow.js`) with an interactive real-time Step HUD.
-- **Autonomous Navigation**: Automatically identifies target platforms (YouTube, Google, Wikipedia, Amazon, GitHub, Reddit), highlights search bars in amber, types queries, and navigates results.
-- **Factual Extraction**: Highlights top results in emerald and leverages **Gemini 3.1 Flash-Lite** to extract exact factual answers directly from live page text.
-- **Full Architecture Blueprint**: Read the comprehensive component and sequence diagrams in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
-
----
-
-## ✨ Features
-
-- 💎 **Spatial Glassmorphism HUD**: Floating translucent interface that stays out of your way and summons instantly.
-- 🌐 **Autonomous Unified Web Browser**:
-  - 94% display size spacious window with vertical-locked geometry.
-  - Live frosted glass Step HUD with dynamic domain badges (`GOOGLE.COM`, `YOUTUBE.COM`, `AMAZON.IN`, `WIKIPEDIA.ORG`).
-  - Active model badge (`⚡ GEMINI 3.1 FLASH-LITE`).
-  - Real-time DOM element highlighting (search bars, top result cards).
-  - Multi-platform extraction: video channels, view counts, product prices, ratings, and Wikipedia summaries.
-- 🎙️ **Voice Processing**: One-click recording with real-time waveform animation, Gemini audio transcription, and Featherless AI transcript cleanup.
-- 🖼️ **Attached Image Snippet Pill**: Snips attach cleanly inside the chat box with live preview thumbnails and instant removal.
-- ⚡ **Fastpath System Automation**:
-  - **Windows Command Engine**: Direct execution for native CLI & PowerShell commands (`whoami`, `ipconfig`, `tasklist`, etc.).
-  - **App Lifecycle**: Launch & close apps (VS Code, Notepad, Chrome, Windows Terminal, Calculator, File Explorer).
-  - **Smart Verification**: Checks local Windows environment first, falls back to web apps/browser, or clearly informs the user if not openable.
-  - **Safe File & Directory Operations**: Creates files/folders and sends deleted items safely to the **Windows Recycle Bin**.
-  - **Web & Media**: Instant YouTube searches, Spotify playback, web lookups, and Gmail compose.
-  - **Files**: One-command navigation to Desktop, Downloads, Documents, and custom drives.
-- 📜 **Collapsible History Cards**:
-  - History view automatically collapses long answers (>130 characters / multi-line) to a clean 72px card with a smooth bottom fade gradient mask.
-  - Interactive **Show More ▾** and **Show Less ▴** toggle buttons.
-  - One-click copy response to clipboard.
-- 📇 **Phonebook & Diagnostics**: Quick-access drawer for saved actions, prompt shortcuts, and status monitoring.
-
----
-
-## 📂 Project Structure
-
-The project is structured logically into modular layers:
-
-```
-FahOS/
-├── ARCHITECTURE.md                  # Comprehensive system architecture & sequence blueprint
-├── README.md                        # Project documentation & quickstart
-├── package.json                     # Electron & project manifest
-├── .env.example                     # Example environment configuration
-│
-├── browser-service/                 # Optional Python FastAPI Playwright microservice (:8484)
-│   ├── main.py                      # FastAPI server endpoints
-│   ├── agent.py                     # Playwright & browser-use autonomous logic
-│   ├── browser_manager.py           # Chromium instance manager
-│   ├── task_manager.py              # Background task lifecycle manager
-│   └── start.bat                    # Microservice launcher
-│
-└── src/
-    ├── agent/
-    │   └── agent.js                 # Central AgentEngine orchestrator
-    │
-    ├── core/
-    │   ├── featherless.js           # Featherless AI client (Qwen 2.5 cluster)
-    │   ├── router.js                # ModelRouter & 0ms fast-path intent classifier
-    │   ├── system_actions.js        # Native Windows OS actions (app execution, folders, media)
-    │   ├── vision_sensor.js         # Google Gemini vision sensor for analyzing snips
-    │   └── voice_service.js         # Audio transcription (Gemini) + Featherless transcript refiner
-    │
-    ├── main/
-    │   ├── main.js                  # Electron main process (window management, shortcuts, IPC handlers)
-    │   ├── preload.js               # Secure contextBridge API exposing window.fahosAPI
-    │   └── features/
-    │       ├── browser/
-    │       │   ├── agentBrowserWindow.js     # 94% large-screen window manager & IPC
-    │       │   ├── agentBrowserController.js # Autonomous navigation & Gemini 3.1 extraction
-    │       │   └── agentBrowserPreload.js    # Webview isolation bridge
-    │       └── system/
-    │           └── systemActions.js          # Extended Windows automation engine
-    │
-    └── renderer/
-        ├── index.html               # Floating HUD main interface
-        ├── styles.css               # Glassmorphism styling, animations, history collapse masks
-        ├── app.js                   # Main UI logic (chat, voice recording, snip pill, history toggle)
-        ├── snip.html / .css / .js   # Screen snipping overlay
-        └── browser/
-            ├── agentBrowser.html    # Autonomous browser viewport & HUD layout
-            ├── agentBrowser.css     # Large-screen HUD styling & emerald badges
-            └── agentBrowser.js      # Browser HUD controller & step listeners
+    Router --> Featherless --> FeatherlessAPI
+    Vision --> GeminiAPI
+    Voice --> GroqAPI
+    Voice --> GeminiAPI
 ```
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## 3. Discovered Capabilities & Implementation Status
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>Space</kbd> | Toggle / Summon FahOS HUD |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | Launch Interactive Screen Snipping Tool |
-| <kbd>Esc</kbd> | Minimize / Dismiss HUD or cancel snipping |
-| <kbd>Enter</kbd> | Send message / execute command |
-| <kbd>Shift</kbd> + <kbd>Enter</kbd> | Insert newline in chat prompt |
+| Feature | Category | Status | Description |
+|---------|----------|--------|-------------|
+| **Floating Glassmorphism HUD** | UI / Desktop | `Implemented` | Minimalist, always-on-top overlay with live status and history |
+| **Intent Classifier & Router** | AI / Routing | `Implemented` | Deterministic regex-based classification routing to fast-paths or models |
+| **Featherless Multi-Model LLM** | AI / Reasoning | `Implemented` | Qwen 2.5 32B (complex), Qwen 2.5 Coder 32B, Qwen 2.5 7B (simple) |
+| **Multimodal Vision Sensor** | AI / Vision | `Implemented` | Screen analysis using Google Gemini 3.5 Flash / 3.6 Flash |
+| **Voice-to-Text Pipeline** | AI / Speech | `Implemented` | Audio recording with Groq Whisper Large-v3-Turbo + transcript refiner |
+| **Screen Snipping Tool** | Capture / UI | `Implemented` | Canvas-based rectangular screen capture attached directly to chat prompts |
+| **PowerShell Command Executor** | OS Automation | `Implemented` | Native command execution with strict single-quote parameter sanitization |
+| **Levenshtein Fuzzy App Opener** | OS Automation | `Implemented` | Resolves misspelled app names (e.g., "notepd" → Notepad) |
+| **Windows Directory Navigator** | OS Automation | `Implemented` | Opens Desktop, Downloads, Documents, Pictures, Music, and Videos |
+| **Hardware Volume & Media Controls** | OS Automation | `Implemented` | Volume up/down, mute toggle, play/pause, skip track, lock workstation |
+| **Spotify Search & Play** | Media Integration | `Implemented` | Direct Spotify URI protocol launcher (`spotify:search:...`) |
+| **Web Search & YouTube Scraper** | Web Integration | `Implemented` | Scrapes top YouTube video ID and opens direct playback in browser |
+| **WhatsApp Directory Deep-Link** | Messaging | `Implemented` | Resolves contacts and opens `whatsapp://send?phone=...&text=...` |
+| **Gmail Web Compose Deep-Link** | Email | `Implemented` | Resolves contact email and opens Gmail compose interface |
+| **Notepad Quick Note** | Productivity | `Implemented` | Appends timestamped entries to Desktop `FahOS_Notes.txt` |
+| **Safe File/Folder Creator** | File System | `Implemented` | Creates files or directories with sanitized filenames and auto-extension |
+| **Recycle Bin Safe Deleter** | File System | `Implemented` | Moves files to Windows Recycle Bin via Microsoft.VisualBasic API |
+| **Process Terminator & App Closer**| OS Automation | `Implemented` | Closes processes with status validation (`taskkill /F /IM`) |
+| **Unified Autonomous Browser** | Web Automation | `Implemented` | 94% screen viewport for automated navigation via Gemini 3.1 Flash-Lite |
+| **Python Browser Microservice** | Microservice | `Implemented` | FastAPI server at `127.0.0.1:8484` with Playwright & browser-use |
+| **Contacts / Phonebook CRUD** | Local Data | `Implemented` | Local-first JSON contact storage with 1-click WhatsApp and Email buttons |
+| **Chat History Storage** | Local Data | `Implemented` | Persistent localStorage history with collapsible cards and copy actions |
+| **Window Dragging & Resizing** | Window Management| `Implemented` | Header-based dragging and interactive vertical resize handle |
+| **Streaming Token Display** | AI / Streaming | `Partial` | SSE streaming generator implemented; UI buffering is planned |
+| **Cross-Platform OS Support** | Multi-OS | `Planned` | Native Linux and macOS adapters planned for future releases |
 
 ---
 
-## 🚀 Getting Started
+## 4. Installation & Getting Started
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **Operating System**: Windows 10 or Windows 11
+- **Windows 10 or 11 (64-bit)**
+- **Node.js 18.0.0 or higher**
+- **Python 3.10+** (optional, required for the autonomous browser microservice)
 
-### 1. Clone & Install
+### Step 1: Clone Repository
 ```bash
 git clone https://github.com/agasthya2006/FahOS.git
 cd FahOS
+```
+
+### Step 2: Install Node Dependencies
+```bash
 npm install
 ```
 
-### 2. Configure Environment Keys
-Create a `.env` file in the root directory:
-```env
-# Featherless AI API Key (required for reasoning, coding, and transcript refining)
-# Get yours from: https://featherless.ai
-FEATHERLESS_API_KEY=your_featherless_api_key_here
-
-# Google Gemini API Key (required for vision analysis and voice audio transcription)
-# Get yours from: https://aistudio.google.com
-GEMINI_API_KEY=your_gemini_api_key_here
+### Step 3: Configure Environment Variables
+Copy `.env.example` to `.env`:
+```bash
+copy .env.example .env
 ```
 
-### 3. Launch FahOS
+Provide your API keys in `.env`:
+```env
+# Primary LLM API (Featherless AI)
+FEATHERLESS_API_KEY=your_featherless_api_key
+
+# Google Gemini API (Vision & Autonomous Browser)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Optional: Groq Whisper for voice transcription
+GROQ_API_KEY=your_groq_api_key
+```
+
+### Step 4: Setup Python Browser Microservice (Optional)
+```bash
+cd browser-service
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+playwright install chromium
+cd ..
+```
+
+### Step 5: Start FahOS
 ```bash
 npm start
 ```
-*Or for live development:*
-```bash
-npm run dev
+
+---
+
+## 5. Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl + Space` or `Alt + Space` | Toggle FahOS HUD Overlay (Show / Hide) |
+| `Ctrl + Shift + M` | Trigger Screen Snipping Tool |
+| `Enter` | Send message / Confirm snip selection |
+| `Esc` | Cancel snip selection / Dismiss modal |
+
+---
+
+## 6. Example Natural Language Workflows
+
+### Operating System Controls (0ms Fast-Path)
+- `"open notepad and note down grocery list"`
+- `"increase volume"` or `"mute"`
+- `"lock screen"` or `"lock pc"`
+- `"open downloads"` or `"go to documents"`
+- `"close chrome"` or `"quit calculator"`
+- `"create a file named project_notes.txt on Desktop"`
+- `"delete file old_draft.txt from Desktop"`
+
+### Messaging & Contacts
+- `"open whatsapp and send hi to akhil"`
+- `"send email to john with subject meeting notes"`
+- Click the droplet menu in the HUD to open **Directory Mode** and manage contacts.
+
+### Vision & Screen Understanding
+- Press `Ctrl + Shift + M` or click the Snipper icon.
+- Select any code error, UI element, or chart on your screen.
+- Ask: `"What is causing this error and how do I fix it?"`
+
+### Autonomous Browser Navigation
+- `"search youtube for lofi hip hop beats"`
+- `"go to wikipedia and summarize quantum computing"`
+- `"search amazon for wireless mechanical keyboards"`
+
+---
+
+## 7. Security & Protection Model
+
+1. **PowerShell Argument Sanitization**: All shell parameters are strictly escaped using `sanitizePowerShellArg()` in `src/core/sanitize.js`, using single-quote literals to block variable expansion, subexpressions, and command chaining.
+2. **Safe Deletions**: File deletions are safely transferred to the Windows Recycle Bin using Microsoft VisualBasic FileIO rather than executing permanent disk removals.
+3. **Execution Guard on AI Outputs**: LLM-generated code blocks cannot invoke format, partition, or destructive commands without explicit confirmation.
+4. **Content Security Policy (CSP)**: Enforced across all Electron windows (`index.html`, `snip.html`, `agentBrowser.html`).
+5. **Localhost Network Boundary**: Python microservice CORS is restricted strictly to local loopback origins (`127.0.0.1` and `localhost`).
+
+---
+
+## 8. Repository Structure
+
+```
+FahOS/
+├── browser-service/               # Autonomous Playwright microservice (Python FastAPI)
+│   ├── agent.py                   # browser-use task execution & Chromium controller
+│   ├── browser_manager.py         # Real Chrome profile & window foregrounding
+│   ├── config.py                  # Environment config loader
+│   ├── main.py                    # REST API endpoints (:8484)
+│   ├── requirements.txt           # Python package requirements
+│   ├── schemas.py                 # Pydantic request/response schemas
+│   ├── start.bat                  # Microservice launcher
+│   └── task_manager.py            # Bounded task manager & concurrency lock
+├── docs/                          # Detailed technical documentation
+│   ├── architecture.md            # System topology & subsystem blueprints
+│   ├── features.md                # 25-feature inventory and profiles
+│   ├── workflows.md               # Sequence diagrams & execution chains
+│   ├── installation.md            # Clean-machine setup guide
+│   ├── security.md                # Threat model & protection boundaries
+│   └── scaling.md                 # Scalability analysis & roadmap
+├── src/
+│   ├── agent/
+│   │   └── agent.js               # Central Agent Engine & orchestration
+│   ├── core/
+│   │   ├── featherless.js         # Featherless AI client (Qwen 2.5 models)
+│   │   ├── router.js              # Intent classifier & model routing engine
+│   │   ├── sanitize.js            # PowerShell & HTML security sanitizer
+│   │   ├── system_actions.js      # Core system actions bridge
+│   │   ├── vision_sensor.js       # Gemini multimodal vision sensor
+│   │   └── voice_service.js       # Groq Whisper & Gemini speech pipeline
+│   ├── main/
+│   │   ├── features/
+│   │   │   ├── browser/           # Autonomous browser Electron integration
+│   │   │   │   ├── agentBrowserController.js  # DOM query & Gemini synthesizer
+│   │   │   │   ├── agentBrowserPreload.js     # Browser window preload bridge
+│   │   │   │   ├── agentBrowserWindow.js      # 94% viewport Electron window
+│   │   │   │   └── browserService.js          # HTTP client for Python microservice
+│   │   │   ├── contacts/
+│   │   │   │   └── contactsService.js         # Local contacts store & phonebook
+│   │   │   └── system/
+│   │   │       └── systemActions.js           # Unified Windows OS automation
+│   │   ├── main.js                # Electron main entry, windows, & IPC handlers
+│   │   └── preload.js             # Context bridge for renderer
+│   └── renderer/
+│       ├── assets/                # Application logos & icons
+│       ├── browser/               # Autonomous browser UI
+│       │   ├── agentBrowser.css   # Browser window styling
+│       │   ├── agentBrowser.html  # Browser window markup
+│       │   └── agentBrowser.js    # Browser window frontend controller
+│       ├── shared/
+│       │   └── theme.css          # Design system tokens (colors, typography)
+│       ├── app.js                 # HUD frontend controller & voice encoder
+│       ├── index.html             # HUD overlay window markup
+│       ├── snip.css               # Screen snipper styling
+│       ├── snip.html              # Screen snipper markup
+│       ├── snip.js                # Canvas drag-and-drop selector
+│       └── styles.css             # Glassmorphism design system
+├── .env.example                   # Environment variable template
+├── .gitignore                     # Git ignore rules
+├── CHANGELOG.md                   # Version changelog
+├── CONTRIBUTING.md                # Contribution guidelines
+├── LICENSE                        # MIT License
+├── package.json                   # Project manifest & scripts
+└── README.md                      # Project documentation
 ```
 
 ---
 
-## 🔒 Security & Privacy
-- **API Keys**: Stored locally in `.env` and never tracked by Git.
-- **Local Audio Processing**: Audio is encoded directly on-device into 16kHz PCM WAV before transcription.
-- **Process Isolation**: Electron IPC strictly mediated through `contextBridge` with `contextIsolation: true` and `nodeIntegration: false`.
+## 9. Verification & Testing
+
+Run the syntax and integrity test suite:
+```bash
+npm test
+```
+
+To run individual module verifications:
+```bash
+node -c src/main/main.js
+node -c src/core/router.js
+node -c src/main/features/system/systemActions.js
+```
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+## 10. Acknowledgements & Special Dedication
 
+> ### 🚀 Special Dedication
+> **This project is specially made for : Hackwave 3.0**

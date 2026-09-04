@@ -12,6 +12,7 @@ class BrowserTaskRequest(BaseModel):
     requires_confirmation: Optional[bool] = Field(False, description="Whether to block on sensitive gates")
 
 class TaskStatusResponse(BaseModel):
+    model_config = {"extra": "ignore"}
     task_id: str
     status: str = Field(..., description="queued | starting | running | completed | failed | cancelled | busy")
     summary: Optional[str] = None

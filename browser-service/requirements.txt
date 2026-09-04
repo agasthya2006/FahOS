@@ -5,4 +5,3 @@ python-dotenv>=1.0.0
 browser-use
 playwright
 langchain-google-genai
-langchain-openai

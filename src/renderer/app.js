@@ -373,10 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function escapeHTML(str) {
     if (!str) return '';
-    return str
+    return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // 7. Command Sending Logic
@@ -623,9 +625,9 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="error-card">
               <div class="error-header">
                 <span class="error-icon">⚠️</span>
-                <span class="error-title">${errTitle}</span>
+                <span class="error-title">${escapeHTML(errTitle)}</span>
               </div>
-              <div class="error-body">${errDetail}</div>
+              <div class="error-body">${escapeHTML(errDetail)}</div>
               <button class="retry-btn" id="btn-retry-query">🔄 Retry Query</button>
             </div>
           `;

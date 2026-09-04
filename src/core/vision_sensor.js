@@ -13,7 +13,7 @@ class VisionSensor {
         const envContent = fs.readFileSync(envPath, 'utf8');
         const match = envContent.match(/GEMINI_API_KEY\s*=\s*(.*)/);
         if (match && match[1]) {
-          return match[1].trim();
+          return match[1].trim().replace(/^["']|["']$/g, '');
         }
       }
     } catch (e) {
@@ -108,7 +108,7 @@ Your response MUST follow this clean, human-readable structure:
           }
         } catch (err) {
           console.warn(`[VisionSensor Error on ${modelName}, attempt ${attempt}]:`, err.message);
-          if (attempt < 3) {
+          if (attempt < 2) {
             await new Promise(r => setTimeout(r, 1500));
             continue;
           }

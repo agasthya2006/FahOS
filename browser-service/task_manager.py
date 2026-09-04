@@ -30,6 +30,13 @@ class TaskManager:
 
             task_id = str(uuid.uuid4())[:8]
             self.active_task_id = task_id
+            
+            # Bound in-memory store to prevent memory leaks
+            if len(self.task_store) > 50:
+                oldest_keys = list(self.task_store.keys())[:10]
+                for k in oldest_keys:
+                    self.task_store.pop(k, None)
+
             self.task_store[task_id] = {
                 "task_id": task_id,
                 "status": "starting",

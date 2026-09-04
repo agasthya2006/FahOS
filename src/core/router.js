@@ -7,8 +7,7 @@ class ModelRouter {
       complex: 'Qwen/Qwen2.5-32B-Instruct',
       vision: 'Qwen/Qwen2.5-VL-7B-Instruct',
       simple: 'Qwen/Qwen2.5-7B-Instruct',
-      coding: 'Qwen/Qwen2.5-Coder-32B-Instruct',
-      whisper: 'whisper-1'
+      coding: 'Qwen/Qwen2.5-Coder-32B-Instruct'
     };
   }
 

@@ -178,6 +178,10 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
             answerText: res.description
           };
         }
+        return {
+          success: false,
+          answerText: 'Could not parse the file or folder name. Example: "create a file named notes.txt on Desktop"'
+        };
       }
 
       if (taskCategory === 'fastpath_delete') {
@@ -186,12 +190,17 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         if (delMatch) {
           const name = delMatch[1].trim();
           const targetFolder = delMatch[2] ? delMatch[2].trim() : 'Desktop';
-          const res = await systemActions.deleteFileOrFolder({ name, targetFolder, confirmed: true });
+          const isConfirmed = /\b(?:confirm|confirmed|force|permanently)\b/i.test(userPrompt);
+          const res = await systemActions.deleteFileOrFolder({ name, targetFolder, confirmed: isConfirmed });
           return {
             success: res.ok,
             answerText: res.description
           };
         }
+        return {
+          success: false,
+          answerText: 'Could not determine which file or folder to delete. Example: "delete file old_notes.txt from Desktop"'
+        };
       }
 
       if (taskCategory === 'fastpath_email') {
@@ -222,7 +231,7 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         if (onStatusUpdate) onStatusUpdate(`FahOS is closing ${target}...`);
         const res = await systemActions.closeApp(target);
         return {
-          success: true,
+          success: res.ok,
           answerText: res.description
         };
       }
@@ -233,7 +242,7 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         if (onStatusUpdate) onStatusUpdate(`FahOS is verifying ${target}...`);
         const res = await systemActions.verifyAndOpenItem(target);
         return {
-          success: true,
+          success: res.ok,
           answerText: res.description
         };
       }
@@ -297,17 +306,24 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
       const rawText = response.content || '';
       let cleanAnswer = this.cleanOutputText(rawText) || rawText;
 
-      // Check if user specifically requested execution (e.g. "run command to ...", "execute ...", "do this")
-      const wantsExecution = /^(?:run|execute|perform|do|apply)\b/i.test(userPrompt.trim());
+      // User can request commands, but we don't blindly auto-execute destructive operations
+      const wantsExecution = /^(?:run|execute)\s+(?:command\s+|powershell\s+|cmd\s+|script\s+)?/i.test(userPrompt.trim());
       if (wantsExecution) {
         const cmdMatch = rawText.match(/```(?:powershell|cmd|sh|bash)?\r?\n([\s\S]*?)```/i);
         if (cmdMatch && cmdMatch[1] && cmdMatch[1].trim()) {
           const cmd = cmdMatch[1].trim();
-          console.log(`[Agent Engine] Executing synthesized command: ${cmd}`);
-          if (onStatusUpdate) onStatusUpdate('FahOS is executing command...');
-          const execRes = await systemActions.runPowerShell(cmd);
-          if (execRes.ok && execRes.output) {
-            cleanAnswer += `\n\n> 💻 **Execution Output:**\n\`\`\`text\n${execRes.output.slice(0, 1500)}\n\`\`\``;
+          const isDestructive = /\b(?:format|diskpart|rmdir\s+\/[sS]|Remove-Item\s+.*-(?:Recurse|Force)|Drop-Database|del\s+\/[fF]\s+\/[sS])\b/i.test(cmd);
+          if (!isDestructive) {
+            console.log(`[Agent Engine] Executing synthesized command: ${cmd}`);
+            if (onStatusUpdate) onStatusUpdate('FahOS is executing command...');
+            const execRes = await systemActions.runPowerShell(cmd);
+            if (execRes.ok && execRes.output) {
+              cleanAnswer += `\n\n> 💻 **Execution Output:**\n\`\`\`text\n${execRes.output.slice(0, 1500)}\n\`\`\``;
+            } else if (!execRes.ok) {
+              cleanAnswer += `\n\n> ⚠️ **Execution Note:** Command finished with: ${execRes.error || 'Check command permissions'}`;
+            }
+          } else {
+            cleanAnswer += `\n\n> 🛡️ **Safety Guard:** Potentially destructive command was not executed automatically. You can review and run it manually in PowerShell.`;
           }
         }
       }

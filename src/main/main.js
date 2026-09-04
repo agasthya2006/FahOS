@@ -252,26 +252,38 @@ function setupIPC() {
   });
 
   ipcMain.on('user-send-message', async (event, payload) => {
-    const message = typeof payload === 'string' ? payload : payload.message;
-    const imageBase64 = typeof payload === 'object' ? payload.imageBase64 : null;
+    try {
+      const message = typeof payload === 'string' ? payload : (payload && payload.message) || '';
+      const imageBase64 = typeof payload === 'object' ? payload.imageBase64 : null;
 
-    console.log('[Backend Server] Received Command:', message, imageBase64 ? '(with Image Attachment)' : '');
-    if (hudWindow) {
-      hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
-    }
-
-    const result = await agentEngine.processUserPrompt(
-      message,
-      imageBase64,
-      (statusText) => {
-        if (hudWindow) {
-          hudWindow.webContents.send('agent-status-update', statusText);
-        }
+      console.log('[Backend Server] Received Command:', message, imageBase64 ? '(with Image Attachment)' : '');
+      if (hudWindow) {
+        hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
       }
-    );
 
-    if (hudWindow) {
-      hudWindow.webContents.send('agent-response', result);
+      const result = await agentEngine.processUserPrompt(
+        message,
+        imageBase64,
+        (statusText) => {
+          if (hudWindow) {
+            hudWindow.webContents.send('agent-status-update', statusText);
+          }
+        }
+      );
+
+      if (hudWindow) {
+        hudWindow.webContents.send('agent-response', result);
+      }
+    } catch (err) {
+      console.error('[Backend Server Error on user-send-message]:', err.message);
+      if (hudWindow) {
+        hudWindow.webContents.send('agent-status-update', 'Error encountered');
+        hudWindow.webContents.send('agent-response', {
+          success: false,
+          error: err.message,
+          answerText: `An unexpected error occurred: ${err.message}`
+        });
+      }
     }
   });
 

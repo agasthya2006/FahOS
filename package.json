@@ -4,7 +4,12 @@
   "description": "FahOS V2 — Native Windows AI Operating Layer (See → Understand → Act → Verify)",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node -c src/main/main.js && node -c src/core/router.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",

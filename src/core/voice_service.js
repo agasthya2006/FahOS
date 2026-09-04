@@ -18,7 +18,7 @@ class VoiceService {
         const envContent = fs.readFileSync(envPath, 'utf8');
         const match = envContent.match(new RegExp(`${varName}\\s*=\\s*(.*)`));
         if (match && match[1]) {
-          return match[1].trim();
+          return match[1].trim().replace(/^["']|["']$/g, '');
         }
       }
     } catch (e) {
