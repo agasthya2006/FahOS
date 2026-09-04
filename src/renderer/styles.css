@@ -541,7 +541,7 @@ html, body {
 /* User Speech Bubble */
 .speech-bubble {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: var(--bg-bubble);
   border: 1px solid var(--border-subtle);
@@ -1535,69 +1535,71 @@ html, body {
   color: #34D399;
 }
 
-/* Attached Image Preview inside Speech Bubble */
+/* Attached Image Thumbnail Pill Badge */
 .attached-image-pill {
-  display: none !important;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: rgba(16, 185, 129, 0.14); /* Soft Emerald Glass */
+  border: 1px solid rgba(16, 185, 129, 0.40);
   border-radius: 8px;
   padding: 4px 8px;
-  margin-bottom: 6px;
-  animation: fadeInDown 0.2s ease;
-  width: fit-content;
+  margin: 0;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fadeInPill 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.attached-image-pill.visible {
-  display: flex !important;
+.attached-image-pill.hidden {
+  display: none !important;
 }
 
+/* Small 28x28px Thumbnail Image */
 .attached-thumb-img {
   width: 28px;
   height: 28px;
-  object-fit: cover;
   border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: #000;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
+/* Pill Text Label */
 .attached-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 500;
   color: #34D399;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
 }
 
+/* Remove Image Button (✕) */
 .remove-image-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: transparent;
   border: none;
-  color: #A1A1AA;
-  border-radius: 50%;
-  width: 16px;
-  height: 16px;
-  display: grid;
-  place-content: center;
-  font-size: 9px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: bold;
   cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s ease;
 }
 
 .remove-image-btn:hover {
-  background: rgba(248, 113, 113, 0.3);
-  color: #F87171;
+  color: #F87171; /* Soft Red on hover */
+  background: rgba(248, 113, 113, 0.15);
 }
 
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes fadeInPill {
+  from { opacity: 0; transform: translateY(-4px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* Thinking Card & Luxury Pulse Animation */

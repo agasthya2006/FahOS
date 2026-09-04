@@ -260,11 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response && response.ok && response.refinedText) {
                   if (promptInput) {
                     promptInput.value = response.refinedText;
+                    promptInput.focus();
+                    promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
                   }
-                  updateStatus('Voice Recognized ✦', '#10B981', '✓');
+                  updateStatus('Review & press Enter to send', '#10B981', '✦');
                   setTimeout(() => {
-                    handleSend();
-                  }, 400);
+                    updateStatus('FahOS Ready', '#38BDF8', '✦');
+                  }, 3500);
                 } else {
                   updateStatus('No speech detected — try again', '#F59E0B', '⚠');
                   setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2500);
@@ -333,8 +335,32 @@ document.addEventListener('DOMContentLoaded', () => {
   // 6. Snip Attachment Controls
   function clearSnipAttachment() {
     currentSnipImage = null;
-    if (attachedImagePill) attachedImagePill.classList.add('hidden');
-    if (attachedThumbImg) attachedThumbImg.src = '';
+    if (attachedImagePill) {
+      attachedImagePill.classList.add('hidden');
+    }
+    if (attachedThumbImg) {
+      attachedThumbImg.src = '';
+    }
+    if (promptInput) {
+      promptInput.placeholder = 'Type or speak, then press Enter or click Send...';
+    }
+    updateStatus('FahOS Ready', '#38BDF8', '✦');
+  }
+
+  function attachSnippedImage(dataUrl) {
+    if (!dataUrl) return;
+    currentSnipImage = dataUrl;
+    if (attachedThumbImg) {
+      attachedThumbImg.src = dataUrl;
+    }
+    if (attachedImagePill) {
+      attachedImagePill.classList.remove('hidden');
+    }
+    if (promptInput) {
+      promptInput.placeholder = 'Ask a question about this snip, or press Enter/Send...';
+      promptInput.focus();
+    }
+    updateStatus('Region attached — add prompt & press Send', '#10B981', '✂');
   }
 
   if (removeImageBtn) {
@@ -342,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
       e.stopPropagation();
       clearSnipAttachment();
       if (promptInput) promptInput.focus();
-      updateStatus('FahOS Ready', '#38BDF8');
     });
   }
 
@@ -550,11 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.fahosAPI.onSnipCaptured((event, dataUrl) => {
-      currentSnipImage = dataUrl;
-      if (attachedThumbImg) attachedThumbImg.src = dataUrl;
-      if (attachedImagePill) attachedImagePill.classList.remove('hidden');
-      if (promptInput) promptInput.focus();
-      updateStatus('✂ Screen Snip Attached (Ready to Ask)', '#38BDF8');
+      attachSnippedImage(dataUrl);
     });
 
     window.fahosAPI.onAgentStatusUpdate((event, statusText) => {
