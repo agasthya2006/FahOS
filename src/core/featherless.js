@@ -104,6 +104,106 @@ class FeatherlessClient {
     throw lastError;
   }
 
+  async *chatCompletionStream({ model = 'Qwen/Qwen2.5-7B-Instruct', messages, temperature = 0.3, max_tokens = 2048 }) {
+    if (!this.apiKey) {
+      const mock = this.generateMockResponse(messages);
+      yield mock.content;
+      return;
+    }
+
+    const payload = {
+      model,
+      messages,
+      temperature,
+      max_tokens,
+      stream: true
+    };
+
+    const maxAttempts = 3;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+      try {
+        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errText = await response.text();
+          const is429 = response.status === 429 || errText.includes('concurrency_limit_exceeded');
+          const is503 = response.status === 503 || errText.includes('capacity_exhausted');
+
+          if ((is429 || is503) && attempt < maxAttempts) {
+            const backoffMs = attempt * 2500;
+            console.warn(`[Featherless Stream] Status ${response.status} on ${model} (attempt ${attempt}/${maxAttempts}). Waiting ${backoffMs}ms...`);
+            await this.sleep(backoffMs);
+            continue;
+          }
+          throw new Error(`Featherless API Error ${response.status}: ${errText}`);
+        }
+
+        // Parse SSE stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            const jsonStr = trimmed.slice(6);
+            if (jsonStr === '[DONE]') return;
+
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) yield delta;
+            } catch (e) {
+              // skip malformed SSE lines
+            }
+          }
+        }
+        return; // stream completed successfully
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          lastError = new Error(`Featherless Stream Timed Out after 60s (Model: ${model})`);
+        } else {
+          lastError = error;
+        }
+
+        if (attempt < maxAttempts && !error.message?.includes('Timed Out')) {
+          const backoffMs = attempt * 1200;
+          console.warn(`[Featherless Stream Error]: ${error.message}. Retrying in ${backoffMs}ms...`);
+          await this.sleep(backoffMs);
+        } else {
+          break;
+        }
+      }
+    }
+
+    console.error('[Featherless Stream Final Failure]:', lastError?.message);
+    throw lastError;
+  }
+
   generateMockResponse(messages) {
     const lastUserMsg = messages.filter(m => m.role === 'user').pop()?.content || '';
     return {

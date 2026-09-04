@@ -9,9 +9,13 @@ venv/
 ENV/
 .env
 
+# Dependencies
+node_modules/
+
 # IDE / OS
 .vscode/
 .idea/
 Thumbs.db
 Desktop.ini
 *.log
+

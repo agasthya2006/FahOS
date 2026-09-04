@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('fahosAPI', {
   minimizeHUD: () => ipcRenderer.send('minimize-hud'),
   resetHUDSize: () => ipcRenderer.send('reset-hud-size'),
   resizeHUDHeight: (targetHeight) => ipcRenderer.send('resize-hud-height', targetHeight),
+  moveHUDBy: (deltaX, deltaY) => ipcRenderer.send('move-hud-by', { deltaX, deltaY }),
   sendMessage: (msg, imageBase64 = null) => ipcRenderer.send('user-send-message', { message: msg, imageBase64 }),
   startSnip: () => ipcRenderer.send('trigger-snip-start'),
   cancelSnip: () => ipcRenderer.send('snip-cancel'),

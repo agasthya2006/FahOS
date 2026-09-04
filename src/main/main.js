@@ -133,6 +133,12 @@ function setupIPC() {
     hudWindow.setBounds({ width: DEFAULT_WIDTH, height: clampedHeight });
   });
 
+  ipcMain.on('move-hud-by', (event, { deltaX, deltaY }) => {
+    if (!hudWindow) return;
+    const [currentX, currentY] = hudWindow.getPosition();
+    hudWindow.setPosition(Math.round(currentX + deltaX), Math.round(currentY + deltaY));
+  });
+
   // Reset to default 265px height
   ipcMain.on('reset-hud-size', () => {
     if (!hudWindow) return;
@@ -181,7 +187,21 @@ function setupIPC() {
           height: Math.round(bounds.height * scaleFactor)
         });
 
-        const dataUrl = croppedImage.toDataURL();
+        // Downscale to max 1280x720 for faster Gemini Vision processing
+        const cropSize = croppedImage.getSize();
+        let finalImage = croppedImage;
+        const MAX_W = 1280, MAX_H = 720;
+        if (cropSize.width > MAX_W || cropSize.height > MAX_H) {
+          const scale = Math.min(MAX_W / cropSize.width, MAX_H / cropSize.height);
+          finalImage = croppedImage.resize({
+            width: Math.round(cropSize.width * scale),
+            height: Math.round(cropSize.height * scale),
+            quality: 'good'
+          });
+        }
+
+        const jpegBuffer = finalImage.toJPEG(75);
+        const dataUrl = `data:image/jpeg;base64,${jpegBuffer.toString('base64')}`;
 
         if (snipWindow) {
           snipWindow.close();
@@ -216,11 +236,15 @@ function setupIPC() {
       hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
     }
 
-    const result = await agentEngine.processUserPrompt(message, imageBase64, (statusText) => {
-      if (hudWindow) {
-        hudWindow.webContents.send('agent-status-update', statusText);
+    const result = await agentEngine.processUserPrompt(
+      message,
+      imageBase64,
+      (statusText) => {
+        if (hudWindow) {
+          hudWindow.webContents.send('agent-status-update', statusText);
+        }
       }
-    });
+    );
 
     if (hudWindow) {
       hudWindow.webContents.send('agent-response', result);
