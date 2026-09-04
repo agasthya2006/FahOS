@@ -34,10 +34,17 @@ class VisionSensor {
 
     const effectivePrompt = userPrompt || 'Explain what is shown on this screen capture in detail.';
 
+    const defaultVisionInstruction = `You are FahOS Vision Assistant. Always respond in fluent, natural English.
+Your response MUST follow this clean, human-readable structure:
+1. Begin with a clear, readable paragraph (2-4 sentences) explaining the main content, concept, or problem shown on screen.
+2. If the topic is complex or has multiple components, follow up with clean bullet points (- **Key Point**: explanation).
+3. NEVER output LaTeX math symbols, code-like dollar wrappers (like $\\mu$, $\\sigma^2$, or $$), or raw formula noise. Express all concepts, formulas, and numbers in plain, natural human words.
+4. NEVER describe screen size, window dimensions, display resolution, UI coordinates, or interface layout unless specifically asked by the user. Focus strictly on the actual content shown.`;
+
     const payload = {
       system_instruction: {
         parts: [{
-          text: systemPrompt || 'You are FahOS Vision Assistant. You must always respond in clear, fluent English. Inspect the attached image carefully and answer the user\'s question strictly based on what is shown on screen. Focus only on the actual content (text, code, data, errors, diagrams). Never describe screen size, window dimensions, resolution, or UI layout unless the user specifically asks for them.'
+          text: systemPrompt || defaultVisionInstruction
         }]
       },
       contents: [
@@ -60,13 +67,15 @@ class VisionSensor {
     };
 
     const modelEndpoints = [
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent'
     ];
 
     for (const endpoint of modelEndpoints) {
       const modelName = endpoint.split('/models/')[1]?.split(':')[0];
-      for (let attempt = 1; attempt <= 3; attempt++) {
+      for (let attempt = 1; attempt <= 2; attempt++) {
         try {
           console.log(`[VisionSensor] Analyzing image directly via Gemini (${modelName}, attempt ${attempt})...`);
           const response = await fetch(`${endpoint}?key=${this.apiKey}`, {
@@ -80,8 +89,13 @@ class VisionSensor {
           if (!response.ok) {
             const errText = await response.text();
             console.warn(`[VisionSensor ${modelName} ${response.status}]:`, errText.slice(0, 200));
-            if ((response.status === 503 || response.status === 429) && attempt < 3) {
-              await new Promise(r => setTimeout(r, 1500));
+            // On quota 429, immediately break and switch to next model without waiting
+            if (response.status === 429) {
+              console.warn(`[VisionSensor] 429 Quota on ${modelName}, immediately switching to next model...`);
+              break;
+            }
+            if (response.status === 503 && attempt < 2) {
+              await new Promise(r => setTimeout(r, 1000));
               continue;
             }
             break;
