@@ -1,0 +1,25 @@
+{
+  "name": "fahos",
+  "version": "1.0.0",
+  "description": "FahOS V2 — Native Windows AI Operating Layer (See → Understand → Act → Verify)",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agasthya2006/FahOS.git"
+  },
+  "keywords": [
+    "ai",
+    "operating-system",
+    "featherless",
+    "windows",
+    "agent"
+  ],
+  "author": "Agasthya",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

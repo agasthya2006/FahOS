@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FahOS HUD</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="hud-container">
+    <!-- Header -->
+    <header class="hud-header">
+      <div class="header-title">
+        <span class="logo-icon">✦</span>
+        <span class="brand-name">FahOS</span>
+        <span class="sparkle">✨</span>
+      </div>
+
+      <!-- Mic Badge -->
+      <div class="badge-mic">
+        <span class="mic-icon">🎙️</span>
+        <span class="divider">|</span>
+        <span class="wave-bar bar1"></span>
+        <span class="wave-bar bar2"></span>
+        <span class="wave-bar bar3"></span>
+        <span class="badge-text">Listening</span>
+      </div>
+
+      <!-- Header Tools -->
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-web" title="Web Search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-snip" title="Screen Snip (Ctrl+Shift+M)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-minimize" title="Minimize">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+        </button>
+        <button class="icon-btn btn-close" id="btn-close" title="Close (Ctrl+Space to toggle)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Body Command Input -->
+    <main class="hud-body">
+      <div class="input-wrapper">
+        <input 
+          type="text" 
+          id="cmd-input" 
+          placeholder="Type or speak, then press Enter or click Send..." 
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="btn-send" class="send-btn" title="Send Command">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </main>
+
+    <!-- Footer Status -->
+    <footer class="hud-footer">
+      <div class="status-pill" id="status-pill">
+        <span class="status-star">✦</span>
+        <span class="status-text">FahOS Ready</span>
+        <span class="status-dot">•</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
