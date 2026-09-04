@@ -153,53 +153,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Option 2: High-Accuracy Voice Engine (Whisper / Gemini Audio Capture + Featherless AI Refiner)
+  // 5. Option 2: High-Accuracy Voice Engine (16kHz PCM WAV Capture + Whisper/Gemini + Featherless AI Refiner)
   let mediaRecorder = null;
+  let audioStream = null;
   let audioChunks = [];
-  let liveSpeechText = '';
-  let recognition = null;
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  if (SpeechRecognition) {
-    try {
-      recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
+  // Encode 16kHz mono Float32Array samples into standard 16-bit PCM WAV
+  function encodeWav(samples, sampleRate) {
+    const buffer = new ArrayBuffer(44 + samples.length * 2);
+    const view = new DataView(buffer);
 
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript.trim()) {
-          liveSpeechText = transcript.trim();
-          if (promptInput) {
-            promptInput.value = liveSpeechText;
-          }
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.warn('[Live Speech Notice]:', e.error);
-      };
-    } catch (e) {
-      console.warn('[SpeechRecognition Init]:', e.message);
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
     }
+
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + samples.length * 2, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, samples.length * 2, true);
+
+    let offset = 44;
+    for (let i = 0; i < samples.length; i++, offset += 2) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    }
+
+    return new Uint8Array(buffer);
   }
 
   async function startListening() {
     if (isListening) return;
     try {
       audioChunks = [];
-      liveSpeechText = '';
+      audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
 
-      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      mediaRecorder = mimeType ? new MediaRecorder(audioStream, { mimeType }) : new MediaRecorder(audioStream);
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -208,11 +211,18 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       mediaRecorder.onstop = async () => {
-        stream.getTracks().forEach(track => track.stop());
+        if (audioStream) {
+          audioStream.getTracks().forEach(t => t.stop());
+          audioStream = null;
+        }
 
-        if (audioChunks.length === 0 && !liveSpeechText) {
-          updateStatus('FahOS Ready', '#38BDF8', '✦');
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        audioChunks = [];
+
+        if (audioBlob.size < 400) {
+          updateStatus('Too short — speak longer', '#F59E0B', '⚠');
           if (micStatus) micStatus.textContent = 'Muted';
+          setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2000);
           return;
         }
 
@@ -220,48 +230,56 @@ document.addEventListener('DOMContentLoaded', () => {
         if (micStatus) micStatus.textContent = 'Polishing...';
 
         try {
-          const actualMime = mediaRecorder.mimeType || 'audio/webm';
-          const audioBlob = new Blob(audioChunks, { type: actualMime });
+          // Decode audio into 16kHz mono Float32 samples and convert to 16-bit PCM WAV
+          const rawArrayBuffer = await audioBlob.arrayBuffer();
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          const audioCtx = new AudioContextClass({ sampleRate: 16000 });
+          const decoded = await audioCtx.decodeAudioData(rawArrayBuffer);
+          const samples = decoded.getChannelData(0);
+          const wavBytes = encodeWav(samples, 16000);
+          audioCtx.close().catch(() => {});
+
+          const wavBlob = new Blob([wavBytes], { type: 'audio/wav' });
           const reader = new FileReader();
 
           reader.onloadend = async () => {
-            const dataUrl = reader.result;
-            const base64Audio = dataUrl && typeof dataUrl === 'string' ? dataUrl.split(',')[1] : null;
+            try {
+              const dataUrl = reader.result;
+              const base64Audio = (dataUrl && typeof dataUrl === 'string') ? dataUrl.split(',')[1] : null;
 
-            if (window.fahosAPI && window.fahosAPI.processVoiceInput) {
-              const response = await window.fahosAPI.processVoiceInput({
-                audioBase64,
-                mimeType: actualMime,
-                speechFallback: liveSpeechText
-              });
-
-              if (response && response.ok && response.refinedText) {
-                if (promptInput) {
-                  promptInput.value = response.refinedText;
-                }
-                updateStatus('Voice Recognized ✦', '#10B981', '✓');
-                setTimeout(() => {
-                  handleSend();
-                }, 400);
-              } else if (liveSpeechText && promptInput) {
-                promptInput.value = liveSpeechText;
-                updateStatus('Voice Recognized ✦', '#10B981', '✓');
-                setTimeout(() => {
-                  handleSend();
-                }, 400);
-              } else {
-                updateStatus('No speech detected', '#EF4444', '✕');
-                setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2000);
+              if (!base64Audio) {
+                throw new Error('Failed to encode audio to base64');
               }
-            } else if (liveSpeechText && promptInput) {
-              promptInput.value = liveSpeechText;
-              handleSend();
-            }
 
-            if (micStatus) micStatus.textContent = 'Muted';
+              if (window.fahosAPI && window.fahosAPI.processVoiceInput) {
+                const response = await window.fahosAPI.processVoiceInput({
+                  audioBase64: base64Audio,
+                  mimeType: 'audio/wav'
+                });
+
+                if (response && response.ok && response.refinedText) {
+                  if (promptInput) {
+                    promptInput.value = response.refinedText;
+                  }
+                  updateStatus('Voice Recognized ✦', '#10B981', '✓');
+                  setTimeout(() => {
+                    handleSend();
+                  }, 400);
+                } else {
+                  updateStatus('No speech detected — try again', '#F59E0B', '⚠');
+                  setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2500);
+                }
+              }
+            } catch (innerErr) {
+              console.error('[Voice Callback Error]:', innerErr);
+              updateStatus('Voice error — try again', '#EF4444', '✕');
+              setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2500);
+            } finally {
+              if (micStatus) micStatus.textContent = 'Muted';
+            }
           };
 
-          reader.readAsDataURL(audioBlob);
+          reader.readAsDataURL(wavBlob);
         } catch (err) {
           console.error('[Voice Processing Error]:', err);
           updateStatus('Voice error', '#EF4444', '✕');
@@ -270,17 +288,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       };
 
-      mediaRecorder.start(250);
+      mediaRecorder.start(100);
       isListening = true;
 
       if (micIconBtn) micIconBtn.classList.add('active');
       if (micBtn) micBtn.classList.add('active');
       if (micStatus) micStatus.textContent = 'Listening';
       updateStatus('FahOS is listening...', '#EF4444', '🎙️');
-
-      if (recognition) {
-        try { recognition.start(); } catch (e) {}
-      }
     } catch (err) {
       console.error('[Microphone Access Error]:', err);
       updateStatus('Microphone denied', '#EF4444', '✕');
@@ -298,10 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (micIconBtn) micIconBtn.classList.remove('active');
     if (micBtn) micBtn.classList.remove('active');
-
-    if (recognition) {
-      try { recognition.stop(); } catch (e) {}
-    }
 
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
       mediaRecorder.stop();

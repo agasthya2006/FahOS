@@ -71,50 +71,62 @@ class VoiceService {
       }
     }
 
-    // 2. High-Accuracy Audio Transcription via Gemini 3.5 Flash Audio
+    // 2. High-Accuracy Audio Transcription via Gemini 3.5 / 3.6 Flash Audio
     if (this.geminiApiKey) {
-      try {
-        console.log('[VoiceService] Transcribing audio with Gemini 3.5 Flash...');
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${this.geminiApiKey}`;
+      const endpoints = [
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
+      ];
 
-        const payload = {
-          contents: [{
-            parts: [
-              {
-                text: 'You are an accurate English speech transcriber. Transcribe all spoken words in this audio verbatim. STRICT: Return ONLY the exact spoken English transcription. If silent or unintelligible, return an empty string. Do NOT add preamble or quotes.'
-              },
-              {
-                inlineData: {
-                  mimeType: mimeType.split(';')[0] || 'audio/webm',
-                  data: audioBase64
+      for (const endpoint of endpoints) {
+        try {
+          const modelName = endpoint.split('/models/')[1]?.split(':')[0];
+          console.log(`[VoiceService] Transcribing audio with ${modelName}...`);
+          const url = `${endpoint}?key=${this.geminiApiKey}`;
+
+          const payload = {
+            contents: [{
+              parts: [
+                {
+                  text: 'You are an accurate audio speech transcriber. Listen to the English speech in this audio and return ONLY the verbatim spoken words. If the audio has no speech or only silence/noise, respond with: NO_SPEECH. Never add quotes or conversational commentary.'
+                },
+                {
+                  inlineData: {
+                    mimeType: mimeType ? mimeType.split(';')[0] : 'audio/wav',
+                    data: audioBase64
+                  }
                 }
-              }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.0,
-            maxOutputTokens: 256
-          }
-        };
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.0,
+              maxOutputTokens: 256
+            }
+          };
 
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          const candidateText = data?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text?.trim() || '';
-          if (candidateText && !/silent|unintelligible|no speech/i.test(candidateText)) {
-            console.log('[VoiceService Gemini Audio] Raw Transcription:', candidateText);
-            return candidateText;
+          if (res.ok) {
+            const data = await res.json();
+            const candidateText = data?.candidates?.[0]?.content?.parts?.find(p => p.text)?.text?.trim() || '';
+            if (candidateText && !/^(?:NO_SPEECH|silent|unintelligible|none|no speech)$/i.test(candidateText)) {
+              console.log(`[VoiceService ${modelName}] Raw Transcription:`, candidateText);
+              return candidateText;
+            }
+            if (/NO_SPEECH/i.test(candidateText)) {
+              console.log(`[VoiceService ${modelName}] Detected silence / no speech in audio.`);
+              return '';
+            }
+          } else {
+            console.warn(`[VoiceService ${modelName}] responded with status ${res.status}`);
           }
-        } else {
-          console.warn(`[VoiceService] Gemini Audio responded with ${res.status}`);
+        } catch (err) {
+          console.warn('[VoiceService Gemini Audio Notice]:', err.message);
         }
-      } catch (err) {
-        console.warn('[VoiceService Gemini Audio Error]:', err.message);
       }
     }
 
