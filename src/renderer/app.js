@@ -153,61 +153,158 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Speech-to-Text Recognition Handler
+  // 5. Option 2: High-Accuracy Voice Engine (Whisper / Gemini Audio Capture + Featherless AI Refiner)
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let liveSpeechText = '';
   let recognition = null;
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
+    try {
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
 
-    recognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      if (promptInput) {
-        promptInput.value = transcript;
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.warn('[Speech Recognition Error]:', event.error);
-      stopListening();
-      updateStatus(`Mic Error: ${event.error}`, '#EF4444');
-    };
-
-    recognition.onend = () => {
-      if (isListening) {
-        stopListening();
-        if (promptInput && promptInput.value.trim().length > 0) {
-          handleSend();
+      recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
         }
-      }
-    };
+        if (transcript.trim()) {
+          liveSpeechText = transcript.trim();
+          if (promptInput) {
+            promptInput.value = liveSpeechText;
+          }
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn('[Live Speech Notice]:', e.error);
+      };
+    } catch (e) {
+      console.warn('[SpeechRecognition Init]:', e.message);
+    }
   }
 
-  function startListening() {
-    isListening = true;
-    if (micIconBtn) micIconBtn.classList.add('active');
-    if (micBtn) micBtn.classList.add('active');
-    if (micStatus) micStatus.textContent = 'Listening';
-    updateStatus('FahOS is listening...', '#EF4444', '🎙️');
-    if (recognition) {
-      try { recognition.start(); } catch (e) {}
+  async function startListening() {
+    if (isListening) return;
+    try {
+      audioChunks = [];
+      liveSpeechText = '';
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+
+      mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+
+        if (audioChunks.length === 0 && !liveSpeechText) {
+          updateStatus('FahOS Ready', '#38BDF8', '✦');
+          if (micStatus) micStatus.textContent = 'Muted';
+          return;
+        }
+
+        updateStatus('Polishing with Featherless AI...', '#A855F7', '⚡');
+        if (micStatus) micStatus.textContent = 'Polishing...';
+
+        try {
+          const actualMime = mediaRecorder.mimeType || 'audio/webm';
+          const audioBlob = new Blob(audioChunks, { type: actualMime });
+          const reader = new FileReader();
+
+          reader.onloadend = async () => {
+            const dataUrl = reader.result;
+            const base64Audio = dataUrl && typeof dataUrl === 'string' ? dataUrl.split(',')[1] : null;
+
+            if (window.fahosAPI && window.fahosAPI.processVoiceInput) {
+              const response = await window.fahosAPI.processVoiceInput({
+                audioBase64,
+                mimeType: actualMime,
+                speechFallback: liveSpeechText
+              });
+
+              if (response && response.ok && response.refinedText) {
+                if (promptInput) {
+                  promptInput.value = response.refinedText;
+                }
+                updateStatus('Voice Recognized ✦', '#10B981', '✓');
+                setTimeout(() => {
+                  handleSend();
+                }, 400);
+              } else if (liveSpeechText && promptInput) {
+                promptInput.value = liveSpeechText;
+                updateStatus('Voice Recognized ✦', '#10B981', '✓');
+                setTimeout(() => {
+                  handleSend();
+                }, 400);
+              } else {
+                updateStatus('No speech detected', '#EF4444', '✕');
+                setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2000);
+              }
+            } else if (liveSpeechText && promptInput) {
+              promptInput.value = liveSpeechText;
+              handleSend();
+            }
+
+            if (micStatus) micStatus.textContent = 'Muted';
+          };
+
+          reader.readAsDataURL(audioBlob);
+        } catch (err) {
+          console.error('[Voice Processing Error]:', err);
+          updateStatus('Voice error', '#EF4444', '✕');
+          if (micStatus) micStatus.textContent = 'Muted';
+          setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2000);
+        }
+      };
+
+      mediaRecorder.start(250);
+      isListening = true;
+
+      if (micIconBtn) micIconBtn.classList.add('active');
+      if (micBtn) micBtn.classList.add('active');
+      if (micStatus) micStatus.textContent = 'Listening';
+      updateStatus('FahOS is listening...', '#EF4444', '🎙️');
+
+      if (recognition) {
+        try { recognition.start(); } catch (e) {}
+      }
+    } catch (err) {
+      console.error('[Microphone Access Error]:', err);
+      updateStatus('Microphone denied', '#EF4444', '✕');
+      isListening = false;
+      if (micIconBtn) micIconBtn.classList.remove('active');
+      if (micBtn) micBtn.classList.remove('active');
+      if (micStatus) micStatus.textContent = 'Muted';
+      setTimeout(() => updateStatus('FahOS Ready', '#38BDF8', '✦'), 2500);
     }
   }
 
   function stopListening() {
+    if (!isListening) return;
     isListening = false;
+
     if (micIconBtn) micIconBtn.classList.remove('active');
     if (micBtn) micBtn.classList.remove('active');
-    if (micStatus) micStatus.textContent = 'Muted';
-    updateStatus('FahOS Ready', '#38BDF8', '✦');
+
     if (recognition) {
       try { recognition.stop(); } catch (e) {}
+    }
+
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
     }
   }
 
@@ -367,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Resets the UI completely to open a fresh new chat session
   function resetToFreshChat() {
+    stopListening();
     // 1. Clear text input
     if (promptInput) {
       promptInput.value = '';

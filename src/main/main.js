@@ -1,6 +1,7 @@
 const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
 const AgentEngine = require('../agent/agent');
+const voiceService = require('../core/voice_service');
 
 // 1. Disable hardware acceleration before ready to eliminate any black rectangular DWM backing artifacts
 app.disableHardwareAcceleration();
@@ -269,6 +270,17 @@ function setupIPC() {
 
     if (hudWindow) {
       hudWindow.webContents.send('agent-response', result);
+    }
+  });
+
+  ipcMain.handle('process-voice-input', async (event, payload) => {
+    try {
+      const { audioBase64, mimeType, speechFallback } = payload || {};
+      const result = await voiceService.processVoiceInput(audioBase64, mimeType, speechFallback);
+      return result;
+    } catch (err) {
+      console.error('[IPC process-voice-input Error]:', err.message);
+      return { ok: false, error: err.message };
     }
   });
 }

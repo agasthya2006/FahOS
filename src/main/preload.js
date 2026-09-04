@@ -15,7 +15,8 @@ contextBridge.exposeInMainWorld('fahosAPI', {
   onTriggerSnip: (callback) => ipcRenderer.on('trigger-snip', callback),
   onSnipCaptured: (callback) => ipcRenderer.on('snip-captured', callback),
   onAgentStatusUpdate: (callback) => ipcRenderer.on('agent-status-update', callback),
-  onAgentResponse: (callback) => ipcRenderer.on('agent-response', callback)
+  onAgentResponse: (callback) => ipcRenderer.on('agent-response', callback),
+  processVoiceInput: (payload) => ipcRenderer.invoke('process-voice-input', payload)
 });
 
 contextBridge.exposeInMainWorld('fahos', {
