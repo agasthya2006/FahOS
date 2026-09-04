@@ -39,7 +39,9 @@ function runPowerShell(cmd) {
     }
 
     if (!trimmed.includes('\n')) {
-      const psCommand = `powershell.exe -NoProfile -NonInteractive -Command "${trimmed.replace(/"/g, '`"')}"`;
+      const psCommand = /^powershell(\.exe)?\s+/i.test(trimmed)
+        ? trimmed
+        : `powershell.exe -NoProfile -NonInteractive -Command "${trimmed.replace(/"/g, '`"')}"`;
       exec(psCommand, (err, stdout, stderr) => {
         if (err) {
           resolve({ ok: false, error: stderr || err.message, output: stdout ? stdout.trim() : '' });
@@ -693,13 +695,29 @@ async function verifyAndOpenItem(query) {
     };
   }
 
+  // 4. If NOT found in Windows environment, Check Browser / Web App
+  const webMatch = modularSystem.resolveWebAppOrUrl ? modularSystem.resolveWebAppOrUrl(norm) : null;
+  if (webMatch) {
+    const res = await runPowerShell(`start "${webMatch.url}"`);
+    return {
+      ok: res.ok,
+      type: 'web',
+      name: webMatch.name,
+      url: webMatch.url,
+      description: `Opened **${webMatch.name}** in your browser.`
+    };
+  }
+
   return {
     ok: false,
     notFound: true,
     name: norm,
-    description: `Could not find application, folder, or file **"${norm}"** on your system.`
+    description: `Could not find application, folder, or file **"${norm}"** on your Windows system, nor is it a recognized web application.\n\n💡 *Tip: If you'd like to search for it online, ask "Search ${norm} on Google".*`
   };
 }
+
+// Modular Windows OS & PowerShell Automation Engine integration
+const modularSystem = require('../main/features/system/systemActions');
 
 module.exports = {
   runPowerShell,
@@ -716,5 +734,12 @@ module.exports = {
   notepadWrite,
   createFileOrFolder,
   findLocalFileOrFolder,
-  verifyAndOpenItem
+  verifyAndOpenItem,
+  closeApp: modularSystem.closeApp,
+  resolveWebAppOrUrl: modularSystem.resolveWebAppOrUrl,
+  WEB_APPS: modularSystem.WEB_APPS,
+  deleteFileOrFolder: modularSystem.deleteFileOrFolder,
+  composeEmail: modularSystem.composeEmail,
+  openWhatsAppChat: modularSystem.openWhatsAppChat,
+  PERMISSION_TIERS: modularSystem.PERMISSION_TIERS
 };

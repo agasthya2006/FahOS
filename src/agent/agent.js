@@ -100,6 +100,19 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
 
     // 0ms Local Fast-Path Execution for Windows OS Actions
     if (taskCategory.startsWith('fastpath_')) {
+      if (taskCategory === 'fastpath_cmd') {
+        const cmdMatch = userPrompt.match(/^(?:run|execute|exec)\s+(?:command\s+)?(.*)$/i);
+        const command = (cmdMatch ? cmdMatch[1] : userPrompt).trim();
+        if (onStatusUpdate) onStatusUpdate(`FahOS is executing Windows command: ${command}...`);
+        console.log(`[Agent Engine] Executing Direct Windows Command: "${command}"`);
+        const execRes = await systemActions.runPowerShell(command);
+        const outputText = execRes.output ? execRes.output.trim() : (execRes.ok ? 'Command executed successfully with no output.' : (execRes.error || 'Execution returned an error code.'));
+        return {
+          success: true,
+          answerText: `🖥️ **Windows Command:** \`${command}\`\n\n\`\`\`text\n${outputText.slice(0, 3000)}\n\`\`\``
+        };
+      }
+
       if (taskCategory === 'fastpath_media') {
         if (onStatusUpdate) onStatusUpdate('FahOS is executing media action...');
         const res = await systemActions.systemControl({ action: userPrompt });
@@ -144,9 +157,17 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
 
       if (taskCategory === 'fastpath_whatsapp') {
         if (onStatusUpdate) onStatusUpdate('FahOS is preparing WhatsApp...');
+        const toMatch = userPrompt.match(/(?:to|with|contact)\s+([^\s,]+)(?:\s+(?:saying|that|message)\s+(.*))?/i);
         const waMatch = userPrompt.match(/^(?:(?:open\s+)?whatsapp\s+(?:and\s+)?(?:send\s+(?:a\s+)?message\s+)?|send\s+(?:a\s+)?(?:whatsapp\s+)?message\s+(?:saying\s+|that\s+|to\s+say\s+)?)(.*)$/i);
-        const text = (waMatch ? waMatch[1] : userPrompt).trim();
-        const res = await systemActions.sendWhatsAppMessage({ text });
+        const contact = toMatch ? toMatch[1].trim() : '';
+        const text = (toMatch && toMatch[2] ? toMatch[2] : (waMatch ? waMatch[1] : userPrompt)).trim();
+
+        let res;
+        if (contact && !/^(?:message|chat)$/i.test(contact)) {
+          res = await systemActions.openWhatsAppChat(contact, text);
+        } else {
+          res = await systemActions.sendWhatsAppMessage({ text });
+        }
         return {
           success: res.ok,
           answerText: res.description
@@ -168,6 +189,33 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         }
       }
 
+      if (taskCategory === 'fastpath_delete') {
+        if (onStatusUpdate) onStatusUpdate('FahOS is deleting item safely...');
+        const delMatch = userPrompt.match(/^(?:delete|remove|trash)\s+(?:the\s+)?(?:file|folder|directory)?\s*([a-zA-Z0-9_\-\.\s]+?)(?:\s+(?:in|on|from|inside)\s+(?:the\s+)?([a-zA-Z0-9_\-\\\/\s]+))?$/i);
+        if (delMatch) {
+          const name = delMatch[1].trim();
+          const targetFolder = delMatch[2] ? delMatch[2].trim() : 'Desktop';
+          const res = await systemActions.deleteFileOrFolder({ name, targetFolder, confirmed: true });
+          return {
+            success: res.ok,
+            answerText: res.description
+          };
+        }
+      }
+
+      if (taskCategory === 'fastpath_email') {
+        if (onStatusUpdate) onStatusUpdate('FahOS is opening email compose...');
+        const emailMatch = userPrompt.match(/^(?:compose\s+(?:an?\s+)?email|send\s+(?:an?\s+)?email|email)\s+(?:to\s+)?([^\s,]+)(?:\s+(?:with\s+subject|subject)\s+['"]?([^'"]+?)['"]?)?(?:\s+(?:and\s+body|body|saying|with\s+message)\s+(.+))?$/i);
+        const target = emailMatch ? emailMatch[1].trim() : '';
+        const subject = emailMatch && emailMatch[2] ? emailMatch[2].trim() : '';
+        const body = emailMatch && emailMatch[3] ? emailMatch[3].trim() : '';
+        const res = await systemActions.composeEmail(target || 'someone@example.com', subject, body);
+        return {
+          success: res.ok,
+          answerText: res.description
+        };
+      }
+
       if (taskCategory === 'fastpath_search') {
         if (onStatusUpdate) onStatusUpdate('FahOS is searching...');
         const searchMatch = userPrompt.match(/^(?:search\s+(?:google|web|for)?\s+(.+)|(?:google|search)\s+(.+))$/i);
@@ -179,13 +227,24 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         };
       }
 
+      if (taskCategory === 'fastpath_close') {
+        const closeMatch = userPrompt.match(/^(?:close|quit|exit|terminate|kill)(?:\s+(?:the\s+)?app)?\s+(.+)$/i);
+        const target = (closeMatch ? closeMatch[1] : userPrompt).trim();
+        if (onStatusUpdate) onStatusUpdate(`FahOS is closing ${target}...`);
+        const res = await systemActions.closeApp(target);
+        return {
+          success: true,
+          answerText: res.description
+        };
+      }
+
       if (taskCategory === 'fastpath_app') {
-        const appMatch = userPrompt.match(/^(?:open|launch|start|run|go\s+to|show|view)(?:\s+(?:the|folder|directory|app|file))?\s+(.+)$/i);
+        const appMatch = userPrompt.match(/^(?:open|launch|start|run|go\s+to|show|view)(?:\s+(?:the|folder|directory|app|file|website|site|page))?\s+(.+)$/i);
         const target = (appMatch ? appMatch[1] : userPrompt).trim();
-        if (onStatusUpdate) onStatusUpdate(`FahOS is opening ${target}...`);
+        if (onStatusUpdate) onStatusUpdate(`FahOS is verifying ${target}...`);
         const res = await systemActions.verifyAndOpenItem(target);
         return {
-          success: res.ok,
+          success: true,
           answerText: res.description
         };
       }

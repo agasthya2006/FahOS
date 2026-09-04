@@ -23,6 +23,11 @@ class ModelRouter {
     const isInformational = /^(?:tell\s+me|tell\s+us|what\s+is|what\s+are|what\s+was|how\s+to|how\s+do|how\s+does|why\s+is|why\s+are|explain|who\s+is|who\s+was|describe|define|teach\s+me|can\s+you\s+explain)\b/i.test(trimmed);
 
     if (!isInformational) {
+      // 0. Direct Windows CLI & PowerShell Commands (Verify first!)
+      if (this.isWindowsCommand(trimmed)) {
+        return 'fastpath_cmd';
+      }
+
       // 1. Media & Volume Controls (0ms Fast-Path)
       if (/^(?:volume\s+(?:up|down|max|min)|increase\s+volume|decrease\s+volume|lower\s+volume|louder|mute|unmute|pause|play|play\s+pause|next\s+track|next\s+song|skip\s+song|previous\s+track|previous\s+song|lock\s+(?:screen|pc|workstation|computer))$/i.test(trimmed)) {
         return 'fastpath_media';
@@ -53,12 +58,27 @@ class ModelRouter {
         return 'fastpath_create';
       }
 
-      // 7. General Web Search
+      // 7. Safe Delete File or Folder (Recycle Bin)
+      if (/^(?:delete|remove|trash)\s+(?:the\s+)?(?:file|folder|directory)?\s*.+$/i.test(trimmed)) {
+        return 'fastpath_delete';
+      }
+
+      // 8. Compose Email Deep-Link
+      if (/^(?:compose\s+(?:an?\s+)?email|send\s+(?:an?\s+)?email|email)\s+(?:to\s+)?.+$/i.test(trimmed)) {
+        return 'fastpath_email';
+      }
+
+      // 9. General Web Search
       if (/^(?:search\s+(?:google|web|for)?\s+.+|(?:google|search)\s+.+)$/i.test(trimmed)) {
         return 'fastpath_search';
       }
 
-      // 8. Open App, Directory, or Local File
+      // 10. Close Application
+      if (/^(?:close|quit|exit|terminate|kill)(?:\s+(?:the\s+)?app)?\s+([a-zA-Z0-9_\s\-\.]+)$/i.test(trimmed)) {
+        return 'fastpath_close';
+      }
+
+      // 11. Open App, Directory, or Local File
       if (/^(?:open|launch|start|run|go\s+to|show|view)(?:\s+(?:the|folder|directory|app|file))?\s+([a-zA-Z0-9_\s\-\.\:\\\/]+)$/i.test(trimmed)) {
         return 'fastpath_app';
       }
@@ -72,6 +92,24 @@ class ModelRouter {
       return 'simple';
     }
     return 'complex';
+  }
+
+  isWindowsCommand(prompt) {
+    const trimmed = String(prompt || '').trim();
+
+    // 1. Explicit command execution prefix: "run <cmd>", "execute <cmd>", "exec <cmd>"
+    if (/^(?:run|execute|exec)\s+(?:command\s+)?([a-zA-Z0-9_\-\.\/\\:\s\$\|\&><\*\"]+)$/i.test(trimmed)) {
+      const target = trimmed.replace(/^(?:run|execute|exec)\s+(?:command\s+)?/i, '').trim();
+      const isSimpleApp = /^(?:notepad|calc|calculator|chrome|browser|code|vscode|explorer|files|paint|mspaint|terminal|cmd|powershell|taskmgr|settings|spotify|whatsapp)$/i.test(target);
+      if (!isSimpleApp) {
+        return true;
+      }
+    }
+
+    // 2. Direct Windows CLI commands or PowerShell cmdlets
+    const DIRECT_CLI = /^(?:ipconfig|systeminfo|tasklist|whoami|hostname|netstat|tracert|nslookup|dir|tree|ver|cls|route|arp|driverquery|taskkill|get-process|get-service|get-childitem|get-command|get-date|get-computerinfo|get-help|get-history|get-host|get-location|get-volume|test-connection|test-netconnection)(?:\s+.*)?$/i;
+
+    return DIRECT_CLI.test(trimmed);
   }
 
   selectModel(taskType = 'complex') {

@@ -609,13 +609,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateStatus('✓ Done ✓', '#10B981');
       } else {
-        const errDetail = (result && result.error) ? result.error : 'Service temporarily busy';
+        const errDetail = (result && result.error) ? result.error : ((result && result.answerText) ? result.answerText : 'Service temporarily busy');
+        const errTitle = (result && result.answerText && !result.error) ? 'Unable to Complete Request' : 'Service Temporarily Busy';
         if (actionTree) {
           actionTree.innerHTML = `
             <div class="error-card">
               <div class="error-header">
                 <span class="error-icon">⚠️</span>
-                <span class="error-title">Service Temporarily Busy</span>
+                <span class="error-title">${errTitle}</span>
               </div>
               <div class="error-body">${errDetail}</div>
               <button class="retry-btn" id="btn-retry-query">🔄 Retry Query</button>

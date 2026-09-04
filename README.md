@@ -103,9 +103,12 @@ flowchart TD
 - 🎙️ **Voice Processing**: One-click recording with real-time waveform animation, Gemini audio transcription, and Featherless AI transcript cleanup.
 - 🖼️ **Attached Image Snippet Pill**: Snips attach cleanly inside the chat box with live preview thumbnails and instant removal.
 - ⚡ **Fastpath System Automation**:
-  - **Apps**: Launch VS Code, Notepad, Chrome, Windows Terminal, Calculator, File Explorer.
-  - **Web & Media**: Instant YouTube searches, Spotify playback, web lookups.
-  - **Files**: One-command navigation to Desktop, Downloads, and Documents.
+  - **Windows Command Engine**: Direct execution for native CLI & PowerShell commands (`whoami`, `ipconfig`, `tasklist`, etc.).
+  - **App Lifecycle**: Launch & close apps (VS Code, Notepad, Chrome, Windows Terminal, Calculator, File Explorer).
+  - **Smart Verification**: Checks local Windows environment first, falls back to web apps/browser, or clearly informs the user if not openable.
+  - **Safe File & Directory Operations**: Creates files/folders and sends deleted items safely to the **Windows Recycle Bin**.
+  - **Web & Media**: Instant YouTube searches, Spotify playback, web lookups, and Gmail compose.
+  - **Files**: One-command navigation to Desktop, Downloads, Documents, and custom drives.
 - 📜 **Collapsible History Cards**:
   - History view automatically collapses long answers (>130 characters / multi-line) to a clean 72px card with a smooth bottom fade gradient mask.
   - Interactive **Show More ▾** and **Show Less ▴** toggle buttons.
@@ -138,7 +141,10 @@ FahOS/
     │
     ├── main/
     │   ├── main.js          # Electron main process (window management, shortcuts, IPC handlers)
-    │   └── preload.js       # Secure contextBridge API exposing window.fahosAPI
+    │   ├── preload.js       # Secure contextBridge API exposing window.fahosAPI
+    │   └── features/
+    │       └── system/
+    │           └── systemActions.js # Modular Windows automation engine (app open/close, recycle bin, web app fallback)
     │
     └── renderer/
         ├── index.html       # Floating HUD main interface
