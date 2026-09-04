@@ -37,7 +37,7 @@ class VisionSensor {
     const payload = {
       system_instruction: {
         parts: [{
-          text: systemPrompt || 'You are FahOS Vision Assistant. Inspect the attached image carefully and answer the user\'s question directly based on what is shown on screen. Focus on the actual content (text, code, data, errors, diagrams) rather than describing UI layout or chrome.'
+          text: systemPrompt || 'You are FahOS Vision Assistant. You must always respond in clear, fluent English. Inspect the attached image carefully and answer the user\'s question strictly based on what is shown on screen. Focus only on the actual content (text, code, data, errors, diagrams). Never describe screen size, window dimensions, resolution, or UI layout unless the user specifically asks for them.'
         }]
       },
       contents: [
