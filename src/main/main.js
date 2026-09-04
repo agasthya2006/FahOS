@@ -90,21 +90,42 @@ function createSnipWindow() {
   });
 }
 
-function registerGlobalShortcuts() {
-  const toggleVisibility = () => {
-    if (!hudWindow) return;
-    if (hudWindow.isVisible()) {
-      hudWindow.hide();
-    } else {
-      hudWindow.show();
-      hudWindow.focus();
-      hudWindow.webContents.send('focus-input');
-    }
-  };
+function showOverlay() {
+  if (!hudWindow) return;
+  if (hudWindow.isMinimized()) hudWindow.restore();
+  hudWindow.show();
+  hudWindow.setAlwaysOnTop(true, 'floating', 1);
+  hudWindow.moveTop();
+  hudWindow.focus();
 
+  // Send 'fahos:appear' to trigger a fresh new chat session on open
+  hudWindow.webContents.send('fahos:appear');
+  hudWindow.webContents.send('focus-input');
+}
+
+function hideOverlay() {
+  if (!hudWindow || !hudWindow.isVisible()) return;
+  hudWindow.webContents.send('fahos:prepareHide');
+  setTimeout(() => {
+    if (hudWindow && !hudWindow.isDestroyed()) {
+      hudWindow.hide();
+    }
+  }, 100);
+}
+
+function toggleOverlay() {
+  if (!hudWindow) return;
+  if (hudWindow.isVisible() && !hudWindow.isMinimized()) {
+    hideOverlay();
+  } else {
+    showOverlay();
+  }
+}
+
+function registerGlobalShortcuts() {
   // Bind Ctrl + Space and Alt + Space
-  globalShortcut.register('CommandOrControl+Space', toggleVisibility);
-  globalShortcut.register('Alt+Space', toggleVisibility);
+  globalShortcut.register('CommandOrControl+Space', toggleOverlay);
+  globalShortcut.register('Alt+Space', toggleOverlay);
 
   // Ctrl + Shift + M for Screen Snipping
   globalShortcut.register('CommandOrControl+Shift+M', () => {
@@ -119,7 +140,7 @@ function setupIPC() {
   agentEngine = new AgentEngine();
 
   ipcMain.on('close-hud', () => {
-    if (hudWindow) hudWindow.hide();
+    hideOverlay();
   });
 
   ipcMain.on('minimize-hud', () => {

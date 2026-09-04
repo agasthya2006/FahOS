@@ -365,6 +365,42 @@ document.addEventListener('DOMContentLoaded', () => {
     return html;
   }
 
+  // Resets the UI completely to open a fresh new chat session
+  function resetToFreshChat() {
+    // 1. Clear text input
+    if (promptInput) {
+      promptInput.value = '';
+      promptInput.placeholder = 'Type or speak, then press Enter or click Send...';
+    }
+
+    // 2. Hide and clear previous AI response
+    if (responseContainer) {
+      responseContainer.style.display = 'none';
+    }
+    if (actionTree) {
+      actionTree.innerHTML = '';
+    }
+
+    // 3. Clear any attached screen snip image
+    clearSnipAttachment();
+
+    // 4. Return from History/Directory back to main Chat View
+    switchView('chat');
+
+    // 5. Reset status pill to ready
+    updateStatus('FahOS Ready', '#38BDF8', '✦');
+
+    // 6. Reset window height to initial default 265px
+    if (window.fahosAPI && window.fahosAPI.resetHUDSize) {
+      window.fahosAPI.resetHUDSize();
+    }
+
+    // 7. Focus cursor back into text input
+    setTimeout(() => {
+      if (promptInput) promptInput.focus();
+    }, 50);
+  }
+
   // 9. Window Header Controls
   if (window.fahosAPI) {
     if (closeBtn) {
@@ -377,8 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resetSizeBtn) {
       resetSizeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        window.fahosAPI.resetHUDSize();
-        updateStatus('FahOS Ready', '#38BDF8');
+        resetToFreshChat();
       });
     }
 
@@ -392,6 +427,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+
+    window.fahosAPI.onAppear(() => {
+      console.log('[FahOS UI] Reopened via Ctrl+Space — resetting to fresh chat session.');
+      resetToFreshChat();
+    });
 
     window.fahosAPI.onFocusInput(() => {
       if (promptInput) promptInput.focus();
