@@ -671,6 +671,14 @@ document.addEventListener('DOMContentLoaded', () => {
     historyList.innerHTML = history.map((item, idx) => {
       const formattedA = parseMarkdownToHTML(item.response);
       const timeStr = new Date(item.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+      // Check if the AI response is long (> 130 characters or multi-line)
+      const isLong = item.response && (item.response.length > 130 || item.response.includes('\n'));
+      const answerClass = isLong ? 'history-ai-answer collapsed' : 'history-ai-answer';
+      const expandBtnHtml = isLong
+        ? `<button class="history-expand-btn" data-idx="${idx}"><span>Show More ▾</span></button>`
+        : '';
+
       return `
         <div class="history-card" data-idx="${idx}">
           <div class="history-card-top">
@@ -681,10 +689,31 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
           </div>
           <div class="history-user-query"><span class="history-role-tag">YOU</span><span>${escapeHTML(item.query)}</span></div>
-          <div class="history-ai-answer">${formattedA}</div>
+          <div class="${answerClass}">${formattedA}</div>
+          ${expandBtnHtml}
         </div>
       `;
     }).join('');
+
+    // Attach click listener to all 'Show More' / 'Show Less' buttons
+    historyList.querySelectorAll('.history-expand-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const card = btn.closest('.history-card');
+        if (!card) return;
+        const answerEl = card.querySelector('.history-ai-answer');
+        if (!answerEl) return;
+
+        const isCollapsed = answerEl.classList.contains('collapsed');
+        if (isCollapsed) {
+          answerEl.classList.remove('collapsed');
+          btn.innerHTML = '<span>Show Less ▴</span>';
+        } else {
+          answerEl.classList.add('collapsed');
+          btn.innerHTML = '<span>Show More ▾</span>';
+        }
+      });
+    });
 
     historyList.querySelectorAll('.copy-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {

@@ -134,7 +134,8 @@ class VoiceService {
   }
 
   /**
-   * Refines raw speech with Featherless AI (Qwen2.5-7B) to remove fillers, stutters, and fix tech jargon
+   * Refines raw speech with Featherless AI (Qwen2.5-7B) to remove fillers, stutters, and fix tech jargon.
+   * STRICT: Acts ONLY as a transcript cleaner/formatter. Never answers questions.
    * @param {string} rawSpeechText
    */
   async refineWithFeatherless(rawSpeechText) {
@@ -142,40 +143,75 @@ class VoiceService {
       return '';
     }
 
-    const trimmed = rawSpeechText.trim();
+    let cleaned = rawSpeechText.trim();
+
+    // Fast deterministic normalization of common vocal fillers and tech terms
+    cleaned = cleaned
+      .replace(/^(?:(?:um|uh|er|ah|like|you know|so yeah)\s+)+/i, '')
+      .replace(/\s+(?:(?:um|uh|er|ah|like|you know|so yeah)\s+)+/gi, ' ')
+      .replace(/\bpower\s*shell\b/gi, 'PowerShell')
+      .replace(/\bvs\s*code\b/gi, 'VS Code')
+      .replace(/\bgit commit minus m\b/gi, 'git commit -m')
+      .replace(/\bget child item\b/gi, 'Get-ChildItem')
+      .replace(/\bnpm run dev\b/gi, 'npm run dev');
+
+    // Detect if input is an informational or conversational question
+    const isQuestion = /^(?:what|who|where|when|why|how|which|whose|whom|is|are|can|could|do|does|did|will|would|should|tell\s+me|explain)\b/i.test(cleaned);
 
     try {
       console.log('[VoiceService] Refining voice transcript with Featherless AI (Qwen2.5-7B)...');
+
+      const fewShotPrompt = `You are an automated voice transcript cleaner. Your ONLY role is text normalization and correcting audio transcription slips.
+
+ABSOLUTE CRITICAL RULES:
+1. NEVER ANSWER ANY QUESTION.
+2. NEVER PROVIDE DEFINITIONS, FACTS, OR EXPLANATIONS.
+3. If the input is a question (e.g. "What is the full form of WHO"), your output MUST BE THE EXACT SAME QUESTION: "What is the full form of WHO?".
+4. If the input is a command (e.g. "open notepad"), output the cleaned command: "Open Notepad".
+5. Output ONLY the verbatim cleaned spoken text without quotes or preamble.
+
+Examples:
+Raw: um what is the full form of who
+Cleaned: What is the full form of WHO?
+
+Raw: who is the prime minister of india
+Cleaned: Who is the Prime Minister of India?
+
+Raw: open power shell and check git status
+Cleaned: Open PowerShell and check git status
+
+Raw: tell me about quantum computing
+Cleaned: Tell me about quantum computing
+
+Raw: ${cleaned}
+Cleaned:`;
+
       const message = await this.featherlessClient.chatCompletion({
         model: 'Qwen/Qwen2.5-7B-Instruct',
         messages: [
           {
-            role: 'system',
-            content: `You are an expert voice command refiner for the FahOS AI assistant.
-Your task is to take raw, messy speech audio transcriptions and convert them into a clean, accurate prompt or Windows OS command.
-
-STRICT RULES:
-1. Strip all vocal hesitation, repetitions, and filler words ("um", "uh", "ah", "like", "you know", "er", "so yeah").
-2. Correct common speech recognition misspellings and technical terms (e.g. "power shell" -> "PowerShell", "git commit minus m" -> "git commit -m", "npm run dev" -> "npm run dev", "vs code" -> "VS Code", "get child item" -> "Get-ChildItem").
-3. Preserve the user's exact query or automation intent.
-4. DO NOT answer the question. DO NOT add conversational chit-chat, notes, or explanations.
-5. Output ONLY the refined plain text string without quotes.`
-          },
-          {
             role: 'user',
-            content: trimmed
+            content: fewShotPrompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 150
+        temperature: 0.0,
+        max_tokens: 100
       });
 
-      const refined = message?.content ? message.content.trim().replace(/^["']|["']$/g, '') : trimmed;
+      let refined = message?.content ? message.content.trim().replace(/^["']|["']$/g, '').replace(/^Cleaned:\s*/i, '') : cleaned;
+
+      // Question Guardrail: If user asked a question, but refiner returned an answer instead of a question
+      const refinedIsQuestion = /^(?:what|who|where|when|why|how|which|whose|whom|is|are|can|could|do|does|did|will|would|should|tell\s+me|explain)\b/i.test(refined);
+      if (isQuestion && !refinedIsQuestion) {
+        console.warn(`[VoiceService] Refiner attempted to answer question ('${refined}') instead of preserving it. Keeping clean question: '${cleaned}'`);
+        return cleaned;
+      }
+
       console.log('[VoiceService] Featherless Refined Result:', refined);
-      return refined || trimmed;
+      return refined || cleaned;
     } catch (err) {
       console.warn('[VoiceService Featherless Refinement Error]:', err.message);
-      return trimmed;
+      return cleaned;
     }
   }
 
