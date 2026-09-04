@@ -55,13 +55,9 @@ html, body {
   gap: 8px;
   transform-origin: center top;
   overflow: hidden;
-  -webkit-app-region: drag;
-  cursor: grab;
+  -webkit-app-region: no-drag;
+  cursor: default;
   animation: smoothPopIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.widget:active {
-  cursor: grabbing;
 }
 
 /* Smooth Appear Animation */
@@ -140,6 +136,11 @@ html, body {
   justify-content: space-between;
   -webkit-app-region: drag;
   cursor: grab;
+  user-select: none;
+}
+
+.widget-header:active {
+  cursor: grabbing;
 }
 
 .brand {

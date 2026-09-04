@@ -553,10 +553,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (openBrowserBtn) {
       openBrowserBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (promptInput && promptInput.value.trim()) {
-          window.fahosAPI.sendMessage(`search ${promptInput.value.trim()}`);
-        } else {
-          window.fahosAPI.sendMessage('search Google');
+        if (window.fahosAPI && window.fahosAPI.openBrowser) {
+          const query = promptInput ? promptInput.value.trim() : '';
+          if (query) {
+            if (query.startsWith('http://') || query.startsWith('https://')) {
+              window.fahosAPI.openBrowser(query);
+            } else {
+              window.fahosAPI.openBrowser(`https://www.google.com/search?q=${encodeURIComponent(query)}`);
+            }
+          } else {
+            window.fahosAPI.openBrowser('https://www.google.com');
+          }
         }
       });
     }
@@ -846,14 +853,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 13. Window Dragging
+  // 13. Window Dragging (Strictly confined to widget header; never on UI body)
   let isDraggingWindow = false;
   let dragStartX = 0;
   let dragStartY = 0;
+  const widgetHeader = document.querySelector('.widget-header');
 
-  if (widget && window.fahosAPI) {
-    widget.addEventListener('mousedown', (e) => {
-      if (e.target.closest('input, textarea, button, .icon-btn, .droplet-item, .send-btn, .bottom-resize-handle, .remove-image-btn, code, blockquote, .table-wrapper')) {
+  if (widgetHeader && window.fahosAPI) {
+    widgetHeader.addEventListener('mousedown', (e) => {
+      if (e.target.closest('input, textarea, button, .icon-btn, .droplet-item, .send-btn, .bottom-resize-handle, .remove-image-btn, .mic-icon-btn, .mic-toggle, .browser-icon-btn, .reset-size-btn, .close-icon')) {
         return;
       }
       isDraggingWindow = true;

@@ -16,7 +16,10 @@ contextBridge.exposeInMainWorld('fahosAPI', {
   onSnipCaptured: (callback) => ipcRenderer.on('snip-captured', callback),
   onAgentStatusUpdate: (callback) => ipcRenderer.on('agent-status-update', callback),
   onAgentResponse: (callback) => ipcRenderer.on('agent-response', callback),
-  processVoiceInput: (payload) => ipcRenderer.invoke('process-voice-input', payload)
+  processVoiceInput: (payload) => ipcRenderer.invoke('process-voice-input', payload),
+  openBrowser: (url) => ipcRenderer.invoke('open-browser-window', url),
+  runBrowserTask: (task) => ipcRenderer.invoke('run-browser-task', task),
+  cancelBrowserTask: () => ipcRenderer.invoke('cancel-browser-task')
 });
 
 contextBridge.exposeInMainWorld('fahos', {

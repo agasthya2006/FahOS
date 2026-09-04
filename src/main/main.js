@@ -2,6 +2,7 @@ const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } =
 const path = require('path');
 const AgentEngine = require('../agent/agent');
 const voiceService = require('../core/voice_service');
+const agentBrowserWindow = require('./features/browser/agentBrowserWindow');
 
 // 1. Disable hardware acceleration before ready to eliminate any black rectangular DWM backing artifacts
 app.disableHardwareAcceleration();
@@ -280,6 +281,37 @@ function setupIPC() {
       return result;
     } catch (err) {
       console.error('[IPC process-voice-input Error]:', err.message);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  // Autonomous Browser Window & Task IPC Handlers
+  ipcMain.handle('open-browser-window', async (event, url) => {
+    try {
+      agentBrowserWindow.createAgentBrowserWindow(url || 'https://www.google.com');
+      return { ok: true };
+    } catch (err) {
+      console.error('[IPC open-browser-window Error]:', err.message);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('run-browser-task', async (event, payload) => {
+    try {
+      const taskText = typeof payload === 'string' ? payload : (payload && payload.task) || '';
+      return await agentBrowserWindow.runAgentTask(taskText);
+    } catch (err) {
+      console.error('[IPC run-browser-task Error]:', err.message);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('cancel-browser-task', async () => {
+    try {
+      const agentController = require('./features/browser/agentBrowserController');
+      agentController.cancel();
+      return { ok: true };
+    } catch (err) {
       return { ok: false, error: err.message };
     }
   });

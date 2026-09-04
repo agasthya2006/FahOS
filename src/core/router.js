@@ -68,17 +68,23 @@ class ModelRouter {
         return 'fastpath_email';
       }
 
-      // 9. General Web Search
+      // 9. Autonomous Browser Tasks (Multi-step queries or explicit browser instructions)
+      if (/\b(?:and\s+(?:tell|show|find|get|search|look|check|read|navigate|fetch|go|click|type|enter|fill)|tell\s+me|find\s+out|how\s+many|what\s+is|what'?s|look\s+up|check\s+for|read\s+about)\b/i.test(trimmed) &&
+          /\b(?:youtube|wikipedia|amazon|google|github|reddit|twitter|website|web|browser|online)\b/i.test(trimmed)) {
+        return 'fastpath_browsertask';
+      }
+
+      // 10. General Web Search
       if (/^(?:search\s+(?:google|web|for)?\s+.+|(?:google|search)\s+.+)$/i.test(trimmed)) {
         return 'fastpath_search';
       }
 
-      // 10. Close Application
+      // 11. Close Application
       if (/^(?:close|quit|exit|terminate|kill)(?:\s+(?:the\s+)?app)?\s+([a-zA-Z0-9_\s\-\.]+)$/i.test(trimmed)) {
         return 'fastpath_close';
       }
 
-      // 11. Open App, Directory, or Local File
+      // 12. Open App, Directory, or Local File
       if (/^(?:open|launch|start|run|go\s+to|show|view)(?:\s+(?:the|folder|directory|app|file))?\s+([a-zA-Z0-9_\s\-\.\:\\\/]+)$/i.test(trimmed)) {
         return 'fastpath_app';
       }

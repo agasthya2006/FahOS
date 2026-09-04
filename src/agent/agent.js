@@ -1,6 +1,7 @@
 const ModelRouter = require('../core/router');
 const VisionSensor = require('../core/vision_sensor');
 const systemActions = require('../core/system_actions');
+const agentBrowserWindow = require('../main/features/browser/agentBrowserWindow');
 
 class AgentEngine {
   constructor() {
@@ -213,6 +214,16 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         return {
           success: res.ok,
           answerText: res.description
+        };
+      }
+
+      if (taskCategory === 'fastpath_browsertask') {
+        if (onStatusUpdate) onStatusUpdate('FahOS is launching Unified Browser Agent...');
+        console.log(`[Agent Engine] Executing Autonomous Web Browser Task: "${userPrompt}"`);
+        const browserRes = await agentBrowserWindow.runAgentTask(userPrompt);
+        return {
+          success: browserRes.ok,
+          answerText: browserRes.summary || browserRes.error || 'Autonomous browser task completed.'
         };
       }
 
