@@ -1,8 +1,9 @@
-const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } = require('electron');
+const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer, shell } = require('electron');
 const path = require('path');
 const AgentEngine = require('../agent/agent');
 const voiceService = require('../core/voice_service');
 const agentBrowserWindow = require('./features/browser/agentBrowserWindow');
+const contactsService = require('./features/contacts/contactsService');
 
 // 1. Disable hardware acceleration before ready to eliminate any black rectangular DWM backing artifacts
 app.disableHardwareAcceleration();
@@ -314,6 +315,43 @@ function setupIPC() {
     } catch (err) {
       return { ok: false, error: err.message };
     }
+  });
+
+  // Contacts & Directory Mode IPC Handlers
+  ipcMain.handle('fahos:getContacts', async () => {
+    return contactsService.getAllContacts();
+  });
+
+  ipcMain.handle('fahos:saveContact', async (_event, payload) => {
+    return contactsService.saveContact(payload.name, payload.phone, payload.email);
+  });
+
+  ipcMain.handle('fahos:deleteContact', async (_event, name) => {
+    return contactsService.deleteContact(name);
+  });
+
+  // 1-Click WhatsApp Chat Launcher
+  ipcMain.handle('fahos:openContactChat', async (_event, name) => {
+    const contacts = contactsService.getAllContacts();
+    const target = contacts.find(c => (c.displayName || '').toLowerCase() === String(name || '').toLowerCase());
+
+    if (target && target.phone) {
+      const url = `whatsapp://send?phone=${target.phone}`;
+      await shell.openExternal(url);
+      return { ok: true, description: `Opened WhatsApp chat with **${target.displayName}**.` };
+    }
+    return { ok: false, error: 'Phone number not found.' };
+  });
+
+  // 1-Click Gmail Web Compose Launcher
+  ipcMain.handle('fahos:composeEmail', async (_event, payload) => {
+    const email = (payload && (payload.email || payload.target)) || '';
+    if (email) {
+      const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}`;
+      await shell.openExternal(url);
+      return { ok: true, description: `Opened Gmail compose for **${email}**.` };
+    }
+    return { ok: false, error: 'Email address not provided.' };
   });
 }
 

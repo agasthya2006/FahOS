@@ -752,80 +752,119 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 11. Local Storage Directory Management
-  function getContacts() {
-    try {
-      const data = localStorage.getItem('fahos_contacts');
-      return data ? JSON.parse(data) : [];
-    } catch (_) {
-      return [];
-    }
-  }
+  // 11. Directory & Contacts Management (Local-First WhatsApp & Email)
+  async function renderPhonebook() {
+      if (!phonebookList) return;
+      const fahosClient = window.fahos || window.fahosAPI;
+      let contacts = [];
+      if (fahosClient && fahosClient.getContacts) {
+        try {
+          contacts = await fahosClient.getContacts();
+        } catch (err) {
+          console.error('[Phonebook] Failed to load contacts:', err);
+        }
+      }
 
-  function saveContact(name, phone, email) {
-    const contacts = getContacts();
-    contacts.unshift({ name, phone, email });
-    localStorage.setItem('fahos_contacts', JSON.stringify(contacts));
-  }
+      if (phonebookCountBadge) phonebookCountBadge.textContent = contacts.length;
 
-  function renderPhonebook() {
-    if (!phonebookList) return;
-    const contacts = getContacts();
-    if (phonebookCountBadge) phonebookCountBadge.textContent = contacts.length;
+      if (!contacts || contacts.length === 0) {
+        phonebookList.innerHTML = '<div class="history-empty"><div class="history-empty-title">Directory is Empty</div><div class="history-empty-desc">Add contacts above to quickly chat or email.</div></div>';
+        return;
+      }
 
-    if (contacts.length === 0) {
-      phonebookList.innerHTML = '<div class="history-empty"><div class="history-empty-title">Directory is Empty</div><div class="history-empty-desc">Add contacts above to quickly chat or email.</div></div>';
-      return;
-    }
+      phonebookList.innerHTML = contacts.map((c) => {
+        const displayName = c.displayName || c.name || '';
+        const phoneHtml = c.phone ? `<span class="contact-phone">+${escapeHTML(c.phone)}</span>` : '';
+        const emailHtml = c.email ? `<span class="contact-email">${escapeHTML(c.email)}</span>` : '';
 
-    phonebookList.innerHTML = contacts.map((c, idx) => {
-      const phoneHtml = c.phone ? `<span class="contact-phone">${escapeHTML(c.phone)}</span>` : '';
-      const emailHtml = c.email ? `<span class="contact-email">${escapeHTML(c.email)}</span>` : '';
-      const chatBtn = c.phone ? `<button class="contact-btn chat-btn" data-phone="${c.phone}">Chat</button>` : '';
-      const emailBtn = c.email ? `<button class="contact-btn email-btn" data-email="${c.email}">Email</button>` : '';
+        const chatBtn = c.phone 
+          ? `<button class="contact-btn chat-btn" data-name="${escapeHTML(displayName)}">💬 Chat</button>` 
+          : '';
+        const composeBtn = c.email 
+          ? `<button class="contact-btn email-btn" data-email="${escapeHTML(c.email)}">✉ Compose</button>` 
+          : '';
 
-      return `
-        <div class="phonebook-card">
-          <div class="contact-info">
-            <span class="contact-name">${escapeHTML(c.name)}</span>
-            <div class="contact-meta">${phoneHtml}${emailHtml}</div>
+        return `
+          <div class="contact-card">
+            <div class="contact-info">
+              <span class="contact-name">${escapeHTML(displayName)}</span>
+              <div class="contact-details-row">${phoneHtml} ${emailHtml}</div>
+            </div>
+            <div class="contact-actions">
+              ${chatBtn}
+              ${composeBtn}
+              <button class="contact-btn delete-btn" data-name="${escapeHTML(displayName)}" title="Delete Contact">🗑</button>
+            </div>
           </div>
-          <div class="contact-actions">${chatBtn}${emailBtn}</div>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
 
-    phonebookList.querySelectorAll('.chat-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const p = btn.getAttribute('data-phone');
-        window.open(`https://wa.me/${p.replace(/[^0-9]/g, '')}`, '_blank');
+      // Wire 1-Click WhatsApp Chat Button
+      phonebookList.querySelectorAll('.chat-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const name = btn.getAttribute('data-name');
+          const client = window.fahos || window.fahosAPI;
+          if (client && client.openContactChat) {
+            await client.openContactChat(name);
+          }
+        });
       });
-    });
 
-    phonebookList.querySelectorAll('.email-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const em = btn.getAttribute('data-email');
-        window.open(`mailto:${em}`, '_blank');
+      // Wire 1-Click Gmail Email Button
+      phonebookList.querySelectorAll('.email-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const email = btn.getAttribute('data-email');
+          const client = window.fahos || window.fahosAPI;
+          if (client && client.composeEmail) {
+            await client.composeEmail({ email });
+          }
+        });
       });
-    });
-  }
 
-  if (saveContactBtn) {
-    saveContactBtn.addEventListener('click', () => {
-      const name = (contactNameInput?.value || '').trim();
-      const phone = (contactPhoneInput?.value || '').trim();
-      const email = (contactEmailInput?.value || '').trim();
-      if (!name) return;
+      // Wire Delete Button
+      phonebookList.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const name = btn.getAttribute('data-name');
+          const client = window.fahos || window.fahosAPI;
+          if (client && client.deleteContact) {
+            await client.deleteContact(name);
+            await renderPhonebook();
+          }
+        });
+      });
+    }
 
-      saveContact(name, phone, email);
-      if (contactNameInput) contactNameInput.value = '';
-      if (contactPhoneInput) contactPhoneInput.value = '';
-      if (contactEmailInput) contactEmailInput.value = '';
-      renderPhonebook();
+    if (saveContactBtn) {
+      saveContactBtn.addEventListener('click', async () => {
+        const name = (contactNameInput?.value || '').trim();
+        const phone = (contactPhoneInput?.value || '').trim();
+        const email = (contactEmailInput?.value || '').trim();
+        if (!name) return;
+
+        const client = window.fahos || window.fahosAPI;
+        if (client && client.saveContact) {
+          await client.saveContact({ name, phone, email });
+        }
+        if (contactNameInput) contactNameInput.value = '';
+        if (contactPhoneInput) contactPhoneInput.value = '';
+        if (contactEmailInput) contactEmailInput.value = '';
+        await renderPhonebook();
+      });
+    }
+
+    [contactNameInput, contactPhoneInput, contactEmailInput].forEach(inp => {
+      if (inp) {
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (saveContactBtn) saveContactBtn.click();
+          }
+        });
+      }
     });
-  }
 
   // 12. Draggable Bottom Resize Handle
   if (bottomResizeHandle && window.fahosAPI) {

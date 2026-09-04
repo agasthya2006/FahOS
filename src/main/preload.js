@@ -19,11 +19,21 @@ contextBridge.exposeInMainWorld('fahosAPI', {
   processVoiceInput: (payload) => ipcRenderer.invoke('process-voice-input', payload),
   openBrowser: (url) => ipcRenderer.invoke('open-browser-window', url),
   runBrowserTask: (task) => ipcRenderer.invoke('run-browser-task', task),
-  cancelBrowserTask: () => ipcRenderer.invoke('cancel-browser-task')
+  cancelBrowserTask: () => ipcRenderer.invoke('cancel-browser-task'),
+  getContacts: () => ipcRenderer.invoke('fahos:getContacts'),
+  saveContact: (payload) => ipcRenderer.invoke('fahos:saveContact', payload),
+  deleteContact: (name) => ipcRenderer.invoke('fahos:deleteContact', name),
+  openContactChat: (name) => ipcRenderer.invoke('fahos:openContactChat', name),
+  composeEmail: (payload) => ipcRenderer.invoke('fahos:composeEmail', payload)
 });
 
 contextBridge.exposeInMainWorld('fahos', {
   onAppear: (callback) => ipcRenderer.on('fahos:appear', () => callback()),
   setHeight: (height) => ipcRenderer.send('resize-hud-height', height),
-  closeHUD: () => ipcRenderer.send('close-hud')
+  closeHUD: () => ipcRenderer.send('close-hud'),
+  getContacts: () => ipcRenderer.invoke('fahos:getContacts'),
+  saveContact: (payload) => ipcRenderer.invoke('fahos:saveContact', payload),
+  deleteContact: (name) => ipcRenderer.invoke('fahos:deleteContact', name),
+  openContactChat: (name) => ipcRenderer.invoke('fahos:openContactChat', name),
+  composeEmail: (payload) => ipcRenderer.invoke('fahos:composeEmail', payload)
 });
