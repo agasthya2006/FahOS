@@ -33,7 +33,29 @@ class ModelRouter {
   async executeTask(taskType, messages, tools = null) {
     const selectedModel = this.selectModel(taskType);
     console.log(`[Model Router] Selected Model: ${selectedModel} for Task Category: ${taskType}`);
-    
+
+    if (taskType === 'vision') {
+      const visionModels = ['Qwen/Qwen2.5-VL-3B-Instruct', 'Qwen/Qwen2.5-VL-7B-Instruct'];
+      let lastVisionErr = null;
+
+      for (const visionModel of visionModels) {
+        try {
+          console.log(`[Model Router Vision Pool] Querying Vision Model: ${visionModel}...`);
+          return await this.client.chatCompletion({
+            model: visionModel,
+            messages,
+            tools
+          });
+        } catch (err) {
+          lastVisionErr = err;
+          console.warn(`[Model Router Vision Pool] ${visionModel} failed (${err.message}). Retrying in 2000ms...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      throw new Error(`Featherless Vision AI models are temporarily busy (${lastVisionErr?.message || '503 Capacity Limit'}). Please try sending your screen snippet again in a few seconds.`);
+    }
+
     try {
       return await this.client.chatCompletion({
         model: selectedModel,
@@ -44,7 +66,6 @@ class ModelRouter {
       console.warn(`[Model Router] Primary model ${selectedModel} failed (${err.message}). Retrying with fast model Qwen/Qwen2.5-7B-Instruct after 1500ms delay...`);
       await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Sanitize messages for text-only fallback model if multimodal payload was sent
       const cleanMessages = messages.map(m => {
         if (Array.isArray(m.content)) {
           const textObj = m.content.find(c => c.type === 'text');

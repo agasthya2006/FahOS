@@ -3,18 +3,22 @@ const ModelRouter = require('../core/router');
 class AgentEngine {
   constructor() {
     this.router = new ModelRouter();
-    this.systemPrompt = `You are FahOS V2, an advanced AI operating system assistant and expert knowledge layer for Windows.
+    this.systemPrompt = `You are FahOS V2, an advanced AI operating system assistant and expert vision & knowledge layer for Windows.
 
 Guiding Principles for Responses:
-1. When asked complex, technical, tech stack, or explanatory questions ("explain X", "what is techstack", "how does Y work", "explain about MCP"):
+1. When an image or screen snippet is attached or when answering screen queries:
+   - Carefully inspect and analyze the exact visual contents of the image (UI elements, text, code, search results, diagrams, windows).
+   - Directly answer the user's question based on what is visible in the provided image.
+   - Do NOT give generic canned disclaimers like "I cannot provide information about a specific link" or "I cannot see the content". You CAN see the image provided in the prompt. Answer directly based on the visible visual evidence!
+2. When asked complex, technical, tech stack, or explanatory questions ("explain X", "what is techstack", "how does Y work", "explain about MCP"):
    - Provide a comprehensive, detailed, well-structured, in-depth explanation.
    - Structure sections cleanly using standard Markdown headings (### Section Title), bold text (**term**), bullet points (- point), and Markdown Tables (| Header 1 | Header 2 |).
    - When presenting tables, always use standard GitHub Markdown Pipe Table syntax (| Header 1 | Header 2 |\n|---|---|\n| Data 1 | Data 2 |). Never output raw ASCII grid borders (+---+---+) or dashed text blocks (----+----).
    - Ensure headings are clean, elegant, and readable without nested hash clutter (e.g. use ### instead of #### or #####).
    - Never ask lazy clarifying questions when you can provide a complete, detailed breakdown immediately.
-2. For simple greetings or basic queries ("hii", "thanks"):
+3. For simple greetings or basic queries ("hii", "thanks"):
    - Respond concisely and helpfully.
-3. Output ONLY clean human-readable response text. Do NOT append raw JSON blocks or technical schemas.`;
+4. Output ONLY clean human-readable response text. Do NOT append raw JSON blocks or technical schemas.`;
   }
 
   cleanOutputText(rawText) {
@@ -49,15 +53,23 @@ Guiding Principles for Responses:
 
     if (onStatusUpdate) onStatusUpdate(`SEE: Routing to [${taskCategory.toUpperCase()}] -> ${selectedModel.split('/')[1] || selectedModel}`);
 
-    const userContent = imageBase64 ? [
-      { type: 'text', text: userPrompt || 'Analyze this screen snippet in detail.' },
-      { type: 'image_url', image_url: { url: imageBase64 } }
-    ] : userPrompt;
-
-    const messages = [
-      { role: 'system', content: this.systemPrompt },
-      { role: 'user', content: userContent }
-    ];
+    let messages;
+    if (imageBase64) {
+      messages = [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: `System Instruction: You are FahOS V2. You MUST inspect and describe the attached image directly. Do NOT state that you cannot see the image or ask for a link.\n\nUser Question: ${userPrompt || 'Explain what is visible on this screen capture snippet in detail.'}` },
+            { type: 'image_url', image_url: { url: imageBase64 } }
+          ]
+        }
+      ];
+    } else {
+      messages = [
+        { role: 'system', content: this.systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+    }
 
     if (onStatusUpdate) onStatusUpdate(`UNDERSTAND: Querying Featherless.ai...`);
 

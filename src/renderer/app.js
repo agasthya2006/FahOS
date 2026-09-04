@@ -135,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const text = (overrideText || cmdInput.value).trim();
     if (!text && !currentSnipImage) return;
 
-    const queryText = text || (currentSnipImage ? 'Analyze this screen snippet' : '');
+    const queryText = text || (currentSnipImage ? 'Inspect this screen capture image carefully and explain what is shown on screen.' : '');
 
     updateStatus('FahOS is thinking...', '#38BDF8');
 
