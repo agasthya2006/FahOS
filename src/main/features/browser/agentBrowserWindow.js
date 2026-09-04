@@ -19,6 +19,10 @@ function registerIpcHandlers() {
   ipc.on('agent:stop', () => {
     console.log('[FahOS Agent Browser] User requested stop.');
     agentController.cancel();
+    try {
+      const browserService = require('./browserService');
+      browserService.cancelActiveBrowserTask().catch(() => {});
+    } catch (_) {}
   });
 
   ipc.on('agent:close', () => {

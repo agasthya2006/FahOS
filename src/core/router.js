@@ -33,12 +33,7 @@ class ModelRouter {
         return 'fastpath_media';
       }
 
-      // 2. YouTube Search & Direct Play
-      if (/^(?:(?:open\s+)?(?:youtube|yt)\s+(?:and\s+)?(?:search|look\s+up|play)(?:\s+(?:for|about))?\s+.+|(?:search|play|look\s+up)(?:\s+(?:for|about))?\s+.+?\s+(?:on|in|using)\s+(?:youtube|yt)|(?:youtube|yt)\s+(?:search|play)\s+.+)$/i.test(trimmed)) {
-        return 'fastpath_youtube';
-      }
-
-      // 3. Spotify Search & Play
+      // 2. Direct Spotify Search & Play (Local App)
       if (/^(?:(?:open\s+)?spotify\s+(?:and\s+)?(?:search|play)\s+|play\s+(?:song\s+)?.+?\s+(?:on\s+)?spotify)/i.test(trimmed)) {
         return 'fastpath_spotify';
       }
@@ -68,15 +63,24 @@ class ModelRouter {
         return 'fastpath_email';
       }
 
-      // 9. Autonomous Browser Tasks (Multi-step queries or explicit browser instructions)
-      if (/\b(?:and\s+(?:tell|show|find|get|search|look|check|read|navigate|fetch|go|click|type|enter|fill)|tell\s+me|find\s+out|how\s+many|what\s+is|what'?s|look\s+up|check\s+for|read\s+about)\b/i.test(trimmed) &&
-          /\b(?:youtube|wikipedia|amazon|google|github|reddit|twitter|website|web|browser|online)\b/i.test(trimmed)) {
+      // 9. Master Directive: Web Task Routing via FahOS Unified Browser
+      const BROWSER_TASK_SIGNALS = [
+        /\b(?:search|look\s+up|find|play|check|get|read|navigate|fetch)\s+.*?\s+(?:on|in|using|from)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github|twitter|x|linkedin|spotify|medium|stackoverflow)\b/i,
+        /^(?:open|launch)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github)\s+(?:and\s+)?(?:search|look\s+up|find|play)\s+(.+)$/i,
+        /^(?:search|google|look\s+up)\s+(?:for\s+)?(.+)$/i,
+        /\b(?:youtube|yt)\s+(?:search|play)\s+(.+)$/i,
+        /\b(?:wikipedia|wiki)\s+(?:search|summary)\s+(.+)$/i,
+        /\b(?:amazon)\s+(?:search|find|price)\s+(.+)$/i,
+        /\b(?:and\s+(?:tell|show|find|get|search|look|check|read|navigate|fetch|go|click|type|enter|fill)|tell\s+me|find\s+out|how\s+many|what\s+is|what'?s|look\s+up|check\s+for|read\s+about)\b/i
+      ];
+
+      if (BROWSER_TASK_SIGNALS.some(pattern => pattern.test(trimmed))) {
         return 'fastpath_browsertask';
       }
 
       // 10. General Web Search
       if (/^(?:search\s+(?:google|web|for)?\s+.+|(?:google|search)\s+.+)$/i.test(trimmed)) {
-        return 'fastpath_search';
+        return 'fastpath_browsertask';
       }
 
       // 11. Close Application

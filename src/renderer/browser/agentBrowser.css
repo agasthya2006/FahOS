@@ -87,6 +87,13 @@ body {
   letter-spacing: 0.4px;
 }
 
+.domain-badge {
+  color: var(--cyan);
+  border-color: rgba(56, 189, 248, 0.3);
+  background: rgba(56, 189, 248, 0.08);
+  font-family: var(--font-mono);
+}
+
 .controls {
   display: flex;
   align-items: center;

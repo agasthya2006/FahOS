@@ -109,7 +109,37 @@ class AgentBrowserController {
       };
     }
 
-    // 4. Default: Google Search
+    // 4. GitHub
+    if (lower.includes('github')) {
+      let query = taskText;
+      const m = taskText.match(/search\s+github\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/github\s+(?:for\s+)?([^,]+)/i);
+      if (m) query = m[1].trim();
+      query = query.replace(/^["']|["']$/g, '').trim();
+
+      return {
+        platform: 'github',
+        homeUrl: 'https://github.com',
+        searchUrl: `https://github.com/search?q=${encodeURIComponent(query)}&type=repositories`,
+        searchQuery: query
+      };
+    }
+
+    // 5. Reddit
+    if (lower.includes('reddit')) {
+      let query = taskText;
+      const m = taskText.match(/search\s+reddit\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/reddit\s+(?:for\s+)?([^,]+)/i);
+      if (m) query = m[1].trim();
+      query = query.replace(/^["']|["']$/g, '').trim();
+
+      return {
+        platform: 'reddit',
+        homeUrl: 'https://www.reddit.com',
+        searchUrl: `https://www.reddit.com/search/?q=${encodeURIComponent(query)}`,
+        searchQuery: query
+      };
+    }
+
+    // 6. Default: Google Search
     let query = taskText;
     const m = taskText.match(/search\s+(?:google\s+)?(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i);
     if (m) query = m[1].trim();
@@ -242,9 +272,14 @@ class AgentBrowserController {
             
             const titleEl = video.querySelector('#video-title');
             const channelEl = video.querySelector('#channel-name a, .ytd-channel-name a');
+            const metaBadges = Array.from(video.querySelectorAll('#metadata-line span')).map(s => s.textContent.trim()).filter(Boolean);
+            const viewCount = metaBadges[0] || '';
+            const watchUrl = titleEl ? titleEl.href : '';
             return {
               title: titleEl ? titleEl.textContent.trim() : '',
-              channel: channelEl ? channelEl.textContent.trim() : ''
+              channel: channelEl ? channelEl.textContent.trim() : '',
+              views: viewCount,
+              watchUrl: watchUrl
             };
           }
           return null;
@@ -262,9 +297,11 @@ class AgentBrowserController {
             
             const titleEl = item.querySelector('h2 a span');
             const priceEl = item.querySelector('.a-price .a-offscreen, .a-price-whole');
+            const ratingEl = item.querySelector('.a-icon-alt');
             return {
               title: titleEl ? titleEl.textContent.trim() : '',
-              price: priceEl ? priceEl.textContent.trim() : ''
+              price: priceEl ? priceEl.textContent.trim() : '',
+              rating: ratingEl ? ratingEl.textContent.trim() : ''
             };
           }
           return null;

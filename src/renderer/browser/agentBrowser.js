@@ -36,11 +36,25 @@ urlInput.addEventListener('keydown', (e) => {
   }
 });
 
+const domainBadge = document.getElementById('domain-badge');
+
+function updateDomainBadge(url) {
+  if (!domainBadge) return;
+  try {
+    const parsed = new URL(url);
+    domainBadge.textContent = parsed.hostname.replace(/^www\./, '');
+  } catch (_) {
+    domainBadge.textContent = url.slice(0, 20);
+  }
+}
+
 webview.addEventListener('did-navigate', (e) => {
   urlInput.value = e.url;
+  updateDomainBadge(e.url);
 });
 webview.addEventListener('did-navigate-in-page', (e) => {
   urlInput.value = e.url;
+  updateDomainBadge(e.url);
 });
 
 btnStop.addEventListener('click', () => {
