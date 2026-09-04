@@ -44,20 +44,15 @@ body {
 .header-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.2px;
 }
 
-.logo-icon {
-  font-size: 14px;
-  color: #FAFAFA;
-}
-
-.sparkle {
-  font-size: 11px;
-  opacity: 0.9;
+.robot-logo {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* Mic Listening Badge */
@@ -217,9 +212,9 @@ body {
   font-weight: 500;
 }
 
-.status-star {
-  font-size: 10px;
-  color: #A1A1AA;
+.mini-robot-icon {
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .status-dot {
