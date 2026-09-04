@@ -1,31 +1,39 @@
-const { app, BrowserWindow, globalShortcut, screen, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, globalShortcut, screen, ipcMain } = require('electron');
 const path = require('path');
 const AgentEngine = require('../agent/agent');
 
+// 1. Disable hardware acceleration before ready to eliminate any black rectangular DWM backing artifacts
+app.disableHardwareAcceleration();
+
 let hudWindow = null;
 let agentEngine = null;
+
+const DEFAULT_WIDTH = 470;
+const DEFAULT_HEIGHT = 265;
 
 function createHUDWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight, y: workAreaY } = primaryDisplay.workArea;
 
-  const windowWidth = 420;
-  const windowHeight = 240;
   const marginX = 24;
   const marginY = 40;
 
   hudWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    x: screenWidth - windowWidth - marginX,
+    width: DEFAULT_WIDTH,
+    height: DEFAULT_HEIGHT,
+    minWidth: 470,
+    maxWidth: 470,
+    minHeight: 200,
+    maxHeight: 920,
+    x: screenWidth - DEFAULT_WIDTH - marginX,
     y: workAreaY + marginY,
     frame: false,
     transparent: true,
+    backgroundColor: '#00000000',
     alwaysOnTop: true,
     resizable: false,
     skipTaskbar: false,
-    hasShadow: true,
-    show: true,
+    hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -44,9 +52,8 @@ function createHUDWindow() {
 }
 
 function registerGlobalShortcuts() {
-  const retSpace = globalShortcut.register('CommandOrControl+Space', () => {
+  const toggleVisibility = () => {
     if (!hudWindow) return;
-
     if (hudWindow.isVisible()) {
       hudWindow.hide();
     } else {
@@ -54,14 +61,13 @@ function registerGlobalShortcuts() {
       hudWindow.focus();
       hudWindow.webContents.send('focus-input');
     }
-  });
+  };
 
-  if (!retSpace) {
-    console.warn('Global shortcut Ctrl+Space failed to register');
-  } else {
-    console.log('Global shortcut Ctrl+Space successfully registered!');
-  }
+  // Bind Ctrl + Space and Alt + Space
+  globalShortcut.register('CommandOrControl+Space', toggleVisibility);
+  globalShortcut.register('Alt+Space', toggleVisibility);
 
+  // Ctrl + Shift + M for Screen Snipping
   globalShortcut.register('CommandOrControl+Shift+M', () => {
     if (hudWindow) {
       hudWindow.show();
@@ -81,9 +87,21 @@ function setupIPC() {
     if (hudWindow) hudWindow.minimize();
   });
 
+  // Dynamic window resizing IPC (hard-locked 470px width)
+  ipcMain.on('resize-hud-height', (event, targetHeight) => {
+    if (!hudWindow) return;
+    const clampedHeight = Math.min(920, Math.max(200, Math.round(targetHeight)));
+    hudWindow.setBounds({ width: DEFAULT_WIDTH, height: clampedHeight });
+  });
+
+  // Reset to default 265px height
+  ipcMain.on('reset-hud-size', () => {
+    if (!hudWindow) return;
+    hudWindow.setBounds({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  });
+
   ipcMain.on('user-send-message', async (event, message) => {
-    console.log('[Backend Server] Received User Command:', message);
-    
+    console.log('[Backend Server] Received Command:', message);
     if (hudWindow) {
       hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
     }

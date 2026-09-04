@@ -3,61 +3,70 @@ const ModelRouter = require('../core/router');
 class AgentEngine {
   constructor() {
     this.router = new ModelRouter();
-    this.systemPrompt = `You are FahOS V2, an autonomous AI operating layer for Windows.
-Your core operating loop is: SEE -> UNDERSTAND -> PLAN -> ACT -> OBSERVE -> VERIFY -> RECOVER.
+    this.systemPrompt = `You are FahOS V2, an intelligent AI operating layer and assistant for Windows.
+Respond directly, clearly, and conversationally in plain, friendly text.
+Do NOT append raw JSON blocks or technical JSON schemas to your conversational answers.`;
+  }
 
-When the user asks you to perform a task:
-1. Analyze the intent and active context.
-2. Produce a JSON plan with discrete steps.
-3. Specify actions and target tools.
-4. Verify output state after each step.
+  cleanOutputText(rawText) {
+    if (!rawText) return '';
+    let text = rawText.trim();
 
-Always output valid structured JSON matching:
-{
-  "intent": "<intent_name>",
-  "summary": "<short_summary>",
-  "steps": [
-    { "step": 1, "action": "<action>", "description": "<desc>", "status": "completed|active|pending" }
-  ]
-}`;
+    // Check if whole output is JSON
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed.summary) return parsed.summary;
+    } catch (e) {}
+
+    // If there is text followed by a JSON block, extract clean text before '{' or strip JSON block
+    const jsonStartIndex = text.indexOf('{');
+    if (jsonStartIndex > 0) {
+      text = text.slice(0, jsonStartIndex).trim();
+    } else if (jsonStartIndex === 0) {
+      // Starts with JSON block, try parsing inside or extracting summary
+      const match = text.match(/"summary"\s*:\s*"([^"]+)"/);
+      if (match && match[1]) return match[1];
+      text = text.replace(/^\{[\s\S]*\}/, '').trim();
+    }
+
+    return text || rawText;
   }
 
   async processUserPrompt(userPrompt, onStatusUpdate = null) {
     console.log(`[Agent Engine] Processing Prompt: "${userPrompt}"`);
 
-    if (onStatusUpdate) onStatusUpdate('SEE: Gathering context...');
+    const taskCategory = this.router.classifyTask(userPrompt);
+    const selectedModel = this.router.selectModel(taskCategory);
+
+    if (onStatusUpdate) onStatusUpdate(`SEE: Routing to [${taskCategory.toUpperCase()}] -> ${selectedModel.split('/')[1] || selectedModel}`);
 
     const messages = [
       { role: 'system', content: this.systemPrompt },
       { role: 'user', content: userPrompt }
     ];
 
-    if (onStatusUpdate) onStatusUpdate('UNDERSTAND: Routing to Featherless AI...');
+    if (onStatusUpdate) onStatusUpdate(`UNDERSTAND: Querying Featherless.ai...`);
 
     try {
-      const response = await this.router.executeTask('reasoning', messages);
-      let plan;
+      const response = await this.router.executeTask(taskCategory, messages);
+      const rawText = response.content || '';
+      const cleanAnswer = this.cleanOutputText(rawText);
 
-      try {
-        plan = JSON.parse(response.content);
-      } catch (parseErr) {
-        plan = {
-          intent: 'direct_response',
-          summary: response.content || 'Task processed successfully.',
-          steps: [
-            { step: 1, action: 'reasoning', description: 'Analyze request', status: 'completed' },
-            { step: 2, action: 'action', description: 'Execute response', status: 'completed' },
-            { step: 3, action: 'verify', description: 'Verify state', status: 'completed' }
-          ]
-        };
-      }
+      const plan = {
+        intent: 'direct_response',
+        summary: cleanAnswer,
+        steps: [
+          { step: 1, action: 'reply', description: cleanAnswer, status: 'completed' }
+        ]
+      };
 
-      if (onStatusUpdate) onStatusUpdate('PLAN: Action tree created');
+      if (onStatusUpdate) onStatusUpdate('PLAN: Response generated');
 
       return {
         success: true,
+        answerText: cleanAnswer,
         plan,
-        message: plan.summary || 'Plan constructed successfully.'
+        message: cleanAnswer
       };
     } catch (error) {
       console.error('[Agent Engine Error]:', error.message);
