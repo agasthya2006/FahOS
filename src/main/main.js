@@ -1,8 +1,9 @@
 const { app, BrowserWindow, globalShortcut, screen, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
+const AgentEngine = require('../agent/agent');
 
 let hudWindow = null;
-let tray = null;
+let agentEngine = null;
 
 function createHUDWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -39,12 +40,10 @@ function createHUDWindow() {
     hudWindow = null;
   });
 
-  // Ensure always on top stays active even when clicking away
   hudWindow.setAlwaysOnTop(true, 'floating', 1);
 }
 
 function registerGlobalShortcuts() {
-  // Ctrl + Space to toggle HUD visibility & focus
   const retSpace = globalShortcut.register('CommandOrControl+Space', () => {
     if (!hudWindow) return;
 
@@ -63,7 +62,6 @@ function registerGlobalShortcuts() {
     console.log('Global shortcut Ctrl+Space successfully registered!');
   }
 
-  // Ctrl + Shift + M for Screen Snipping
   globalShortcut.register('CommandOrControl+Shift+M', () => {
     if (hudWindow) {
       hudWindow.show();
@@ -73,6 +71,8 @@ function registerGlobalShortcuts() {
 }
 
 function setupIPC() {
+  agentEngine = new AgentEngine();
+
   ipcMain.on('close-hud', () => {
     if (hudWindow) hudWindow.hide();
   });
@@ -81,11 +81,21 @@ function setupIPC() {
     if (hudWindow) hudWindow.minimize();
   });
 
-  ipcMain.on('user-send-message', (event, message) => {
-    console.log('FahOS Command Received:', message);
-    // Future: Route to Agent Loop & Featherless AI Core
+  ipcMain.on('user-send-message', async (event, message) => {
+    console.log('[Backend Server] Received User Command:', message);
+    
     if (hudWindow) {
-      hudWindow.webContents.send('agent-response', `Received command: "${message}"`);
+      hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
+    }
+
+    const result = await agentEngine.processUserPrompt(message, (statusText) => {
+      if (hudWindow) {
+        hudWindow.webContents.send('agent-status-update', statusText);
+      }
+    });
+
+    if (hudWindow) {
+      hudWindow.webContents.send('agent-response', result);
     }
   });
 }
