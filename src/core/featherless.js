@@ -68,10 +68,11 @@ class FeatherlessClient {
         if (!response.ok) {
           const errText = await response.text();
           const is429 = response.status === 429 || errText.includes('concurrency_limit_exceeded');
+          const is503 = response.status === 503 || errText.includes('capacity_exhausted');
 
-          if (is429 && attempt < maxAttempts) {
-            const backoffMs = attempt * 1500;
-            console.warn(`[Featherless Client] 429 Concurrency Limit on ${model} (attempt ${attempt}/${maxAttempts}). Waiting ${backoffMs}ms before retrying...`);
+          if ((is429 || is503) && attempt < maxAttempts) {
+            const backoffMs = attempt * 2500;
+            console.warn(`[Featherless Client] Status ${response.status} (${is503 ? 'GPU Capacity Exhausted' : 'Rate Limited'}) on ${model} (attempt ${attempt}/${maxAttempts}). Waiting ${backoffMs}ms before retrying...`);
             await this.sleep(backoffMs);
             continue;
           }
