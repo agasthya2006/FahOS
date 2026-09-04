@@ -123,16 +123,7 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         };
       }
 
-      if (taskCategory === 'fastpath_youtube') {
-        if (onStatusUpdate) onStatusUpdate('FahOS is opening YouTube...');
-        const ytMatch = userPrompt.match(/^(?:(?:open\s+)?(?:youtube|yt)\s+(?:and\s+)?(?:search|look\s+up|play)(?:\s+(?:for|about))?\s+(.+)|(?:search|play|look\s+up)(?:\s+(?:for|about))?\s+(.+?)\s+(?:on|in|using)\s+(?:youtube|yt)|(?:youtube|yt)\s+(?:search|play)\s+(.+))$/i);
-        const query = (ytMatch ? (ytMatch[1] || ytMatch[2] || ytMatch[3]) : userPrompt).trim();
-        const res = await systemActions.webSearch({ engine: 'youtube', query });
-        return {
-          success: res.ok,
-          answerText: res.description
-        };
-      }
+      // Note: YouTube tasks are routed to the Autonomous Unified Browser below
 
       if (taskCategory === 'fastpath_spotify') {
         if (onStatusUpdate) onStatusUpdate('FahOS is opening Spotify...');
@@ -217,24 +208,13 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
         };
       }
 
-      if (taskCategory === 'fastpath_browsertask') {
+      if (taskCategory === 'fastpath_browsertask' || taskCategory === 'fastpath_search' || taskCategory === 'fastpath_youtube') {
         if (onStatusUpdate) onStatusUpdate('FahOS is launching Unified Browser Agent...');
         console.log(`[Agent Engine] Executing Autonomous Web Browser Task: "${userPrompt}"`);
         const browserRes = await agentBrowserWindow.runAgentTask(userPrompt);
         return {
           success: browserRes.ok,
           answerText: browserRes.summary || browserRes.error || 'Autonomous browser task completed.'
-        };
-      }
-
-      if (taskCategory === 'fastpath_search') {
-        if (onStatusUpdate) onStatusUpdate('FahOS is searching...');
-        const searchMatch = userPrompt.match(/^(?:search\s+(?:google|web|for)?\s+(.+)|(?:google|search)\s+(.+))$/i);
-        const query = (searchMatch ? (searchMatch[1] || searchMatch[2]) : userPrompt).trim();
-        const res = await systemActions.webSearch({ engine: 'google', query });
-        return {
-          success: res.ok,
-          answerText: res.description
         };
       }
 

@@ -13,31 +13,53 @@ class ModelRouter {
   }
 
   classifyTask(prompt, hasImage = false) {
-    if (hasImage || /screen|image|screenshot|look|see|vision|window/i.test(prompt)) {
+    if (hasImage) {
+      return 'vision';
+    }
+
+    // Only route to vision when explicitly referencing the screen, screenshot, or display visual state
+    if (/\b(?:on\s+(?:my\s+)?screen|in\s+(?:this\s+)?screenshot|what\s+is\s+on\s+screen|look\s+at\s+(?:my\s+)?screen|see\s+(?:my\s+)?screen|capture\s+screen|screen\s+capture)\b/i.test(prompt)) {
       return 'vision';
     }
 
     const trimmed = prompt.trim();
 
-    // Informational / Explanatory queries must never trigger fast-path actions
+    // 0. Direct Windows CLI & PowerShell Commands (Verify first!)
+    if (this.isWindowsCommand(trimmed)) {
+      return 'fastpath_cmd';
+    }
+
+    // 1. Media & Volume Controls (0ms Fast-Path)
+    if (/^(?:volume\s+(?:up|down|max|min)|increase\s+volume|decrease\s+volume|lower\s+volume|louder|mute|unmute|pause|play|play\s+pause|next\s+track|next\s+song|skip\s+song|previous\s+track|previous\s+song|lock\s+(?:screen|pc|workstation|computer))$/i.test(trimmed)) {
+      return 'fastpath_media';
+    }
+
+    // 2. Direct Spotify Search & Play (Local App)
+    if (/^(?:(?:open\s+)?spotify\s+(?:and\s+)?(?:search|play)\s+|play\s+(?:song\s+)?.+?\s+(?:on\s+)?spotify)/i.test(trimmed)) {
+      return 'fastpath_spotify';
+    }
+
+    // 3. Master Directive: Web Task Routing via FahOS Unified Browser (94% Large-Screen)
+    const BROWSER_TASK_SIGNALS = [
+      /\b(?:search|look\s+up|find|play|check|get|read|navigate|fetch)\s+.*?\s+(?:on|in|using|from)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github|twitter|x|linkedin|spotify|medium|stackoverflow|web|internet)\b/i,
+      /^(?:open|launch|go\s+to)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github)\b/i,
+      /^(?:open|launch)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github)\s+(?:and\s+)?(?:search|look\s+up|find|play)\s+(.+)$/i,
+      /^(?:search|google|look\s+up|browse)\s+(?:for\s+|about\s+)?(.+)$/i,
+      /\b(?:youtube|yt)\s+(?:search|play)\s+(.+)$/i,
+      /\b(?:wikipedia|wiki)\s+(?:search|summary)\s+(.+)$/i,
+      /\b(?:amazon)\s+(?:search|find|price)\s+(.+)$/i,
+      /\b(?:https?:\/\/|[a-z0-9\-\.]+\.(?:com|org|net|io|co|in|dev|ai))\b/i,
+      /\b(?:on\s+(?:the\s+)?(?:web|internet|google|youtube|wikipedia|amazon|reddit|github))\b/i
+    ];
+
+    if (BROWSER_TASK_SIGNALS.some(pattern => pattern.test(trimmed))) {
+      return 'fastpath_browsertask';
+    }
+
+    // Informational / Explanatory queries must never trigger action fast-paths
     const isInformational = /^(?:tell\s+me|tell\s+us|what\s+is|what\s+are|what\s+was|how\s+to|how\s+do|how\s+does|why\s+is|why\s+are|explain|who\s+is|who\s+was|describe|define|teach\s+me|can\s+you\s+explain)\b/i.test(trimmed);
 
     if (!isInformational) {
-      // 0. Direct Windows CLI & PowerShell Commands (Verify first!)
-      if (this.isWindowsCommand(trimmed)) {
-        return 'fastpath_cmd';
-      }
-
-      // 1. Media & Volume Controls (0ms Fast-Path)
-      if (/^(?:volume\s+(?:up|down|max|min)|increase\s+volume|decrease\s+volume|lower\s+volume|louder|mute|unmute|pause|play|play\s+pause|next\s+track|next\s+song|skip\s+song|previous\s+track|previous\s+song|lock\s+(?:screen|pc|workstation|computer))$/i.test(trimmed)) {
-        return 'fastpath_media';
-      }
-
-      // 2. Direct Spotify Search & Play (Local App)
-      if (/^(?:(?:open\s+)?spotify\s+(?:and\s+)?(?:search|play)\s+|play\s+(?:song\s+)?.+?\s+(?:on\s+)?spotify)/i.test(trimmed)) {
-        return 'fastpath_spotify';
-      }
-
       // 4. Notepad Quick Note
       if (/^(?:open\s+notepad\s+and\s+(?:write|note\s+down)\s+|take\s+a\s+note\s+(?:saying\s+|that\s+)?|write\s+note\s+).+$/i.test(trimmed)) {
         return 'fastpath_note';
@@ -63,32 +85,12 @@ class ModelRouter {
         return 'fastpath_email';
       }
 
-      // 9. Master Directive: Web Task Routing via FahOS Unified Browser
-      const BROWSER_TASK_SIGNALS = [
-        /\b(?:search|look\s+up|find|play|check|get|read|navigate|fetch)\s+.*?\s+(?:on|in|using|from)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github|twitter|x|linkedin|spotify|medium|stackoverflow)\b/i,
-        /^(?:open|launch)\s+(?:youtube|yt|google|amazon|wikipedia|reddit|github)\s+(?:and\s+)?(?:search|look\s+up|find|play)\s+(.+)$/i,
-        /^(?:search|google|look\s+up)\s+(?:for\s+)?(.+)$/i,
-        /\b(?:youtube|yt)\s+(?:search|play)\s+(.+)$/i,
-        /\b(?:wikipedia|wiki)\s+(?:search|summary)\s+(.+)$/i,
-        /\b(?:amazon)\s+(?:search|find|price)\s+(.+)$/i,
-        /\b(?:and\s+(?:tell|show|find|get|search|look|check|read|navigate|fetch|go|click|type|enter|fill)|tell\s+me|find\s+out|how\s+many|what\s+is|what'?s|look\s+up|check\s+for|read\s+about)\b/i
-      ];
-
-      if (BROWSER_TASK_SIGNALS.some(pattern => pattern.test(trimmed))) {
-        return 'fastpath_browsertask';
-      }
-
-      // 10. General Web Search
-      if (/^(?:search\s+(?:google|web|for)?\s+.+|(?:google|search)\s+.+)$/i.test(trimmed)) {
-        return 'fastpath_browsertask';
-      }
-
-      // 11. Close Application
+      // 9. Close Application
       if (/^(?:close|quit|exit|terminate|kill)(?:\s+(?:the\s+)?app)?\s+([a-zA-Z0-9_\s\-\.]+)$/i.test(trimmed)) {
         return 'fastpath_close';
       }
 
-      // 12. Open App, Directory, or Local File
+      // 10. Open App, Directory, or Local File
       if (/^(?:open|launch|start|run|go\s+to|show|view)(?:\s+(?:the|folder|directory|app|file))?\s+([a-zA-Z0-9_\s\-\.\:\\\/]+)$/i.test(trimmed)) {
         return 'fastpath_app';
       }

@@ -61,16 +61,24 @@ class AgentBrowserController {
     return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   }
 
+  extractCleanQuery(taskText) {
+    let q = taskText.trim();
+    q = q.replace(/^(?:can\s+you\s+)?(?:please\s+)?(?:open|launch|go\s+to|navigate\s+to)\s+(?:youtube|yt|google|amazon|wikipedia|wiki|reddit|github|the\s+web|web)\s+(?:and\s+)?/i, '');
+    q = q.replace(/(?:\s*,?\s*and\s+(?:tell|show|give|summarize|find|extract).*)$/i, '');
+    q = q.replace(/^(?:search|look\s+up|find(?:\s+out)?|query|google|play|check|browse\s+for|view|read\s+about)\s+/i, '');
+    q = q.replace(/^(?:on\s+)?(?:youtube|yt|google|amazon|wikipedia|wiki|reddit|github)\s+/i, '');
+    q = q.replace(/^(?:for|about|on|regarding|to\s+find)\s+/i, '');
+    q = q.replace(/\s+(?:on|in|using|from|via)\s+(?:youtube|yt|google|amazon|wikipedia|wiki|reddit|github|the\s+web|web|internet)\b/gi, '');
+    q = q.replace(/^["']|["']$/g, '').trim();
+    return q || taskText.trim();
+  }
+
   resolveTargetPlan(taskText) {
     const lower = taskText.toLowerCase();
+    const query = this.extractCleanQuery(taskText);
 
     // 1. YouTube
-    if (lower.includes('youtube')) {
-      let query = taskText;
-      const m = taskText.match(/search\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/youtube\s+(?:for\s+)?([^,]+)/i);
-      if (m) query = m[1].trim();
-      query = query.replace(/^["']|["']$/g, '').trim();
-
+    if (/\b(?:youtube|yt)\b/i.test(taskText)) {
       return {
         platform: 'youtube',
         homeUrl: 'https://www.youtube.com',
@@ -80,12 +88,7 @@ class AgentBrowserController {
     }
 
     // 2. Wikipedia
-    if (lower.includes('wikipedia')) {
-      let query = taskText;
-      const m = taskText.match(/search\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/wikipedia\s+([^,]+)/i);
-      if (m) query = m[1].trim();
-      query = query.replace(/^["']|["']$/g, '').trim();
-
+    if (/\b(?:wikipedia|wiki)\b/i.test(taskText)) {
       return {
         platform: 'wikipedia',
         homeUrl: 'https://en.wikipedia.org',
@@ -95,12 +98,7 @@ class AgentBrowserController {
     }
 
     // 3. Amazon
-    if (lower.includes('amazon')) {
-      let query = taskText;
-      const m = taskText.match(/search\s+amazon\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/amazon\s+(?:for\s+)?([^,]+)/i);
-      if (m) query = m[1].trim();
-      query = query.replace(/^["']|["']$/g, '').trim();
-
+    if (/\b(?:amazon)\b/i.test(taskText)) {
       return {
         platform: 'amazon',
         homeUrl: 'https://www.amazon.in',
@@ -110,12 +108,7 @@ class AgentBrowserController {
     }
 
     // 4. GitHub
-    if (lower.includes('github')) {
-      let query = taskText;
-      const m = taskText.match(/search\s+github\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/github\s+(?:for\s+)?([^,]+)/i);
-      if (m) query = m[1].trim();
-      query = query.replace(/^["']|["']$/g, '').trim();
-
+    if (/\b(?:github)\b/i.test(taskText)) {
       return {
         platform: 'github',
         homeUrl: 'https://github.com',
@@ -125,12 +118,7 @@ class AgentBrowserController {
     }
 
     // 5. Reddit
-    if (lower.includes('reddit')) {
-      let query = taskText;
-      const m = taskText.match(/search\s+reddit\s+(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i) || taskText.match(/reddit\s+(?:for\s+)?([^,]+)/i);
-      if (m) query = m[1].trim();
-      query = query.replace(/^["']|["']$/g, '').trim();
-
+    if (/\b(?:reddit)\b/i.test(taskText)) {
       return {
         platform: 'reddit',
         homeUrl: 'https://www.reddit.com',
@@ -140,11 +128,6 @@ class AgentBrowserController {
     }
 
     // 6. Default: Google Search
-    let query = taskText;
-    const m = taskText.match(/search\s+(?:google\s+)?(?:for\s+)?([^,]+?)(?:\s*,|\s+and|\s+tell|$)/i);
-    if (m) query = m[1].trim();
-    query = query.replace(/^["']|["']$/g, '').trim();
-
     return {
       platform: 'google',
       homeUrl: 'https://www.google.com',
