@@ -10,7 +10,12 @@
 [![Electron](https://img.shields.io/badge/Electron-31.0.0-47848F?style=flat-square&logo=electron)](https://www.electronjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0.0-339933?style=flat-square&logo=node.js)](https://nodejs.org/)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python)](https://python.org/)
+[![Presentation](https://img.shields.io/badge/Presentation-FahOS%20PPT%20(Google%20Slides)-EA4335?style=flat-square&logo=google-slides&logoColor=white)](https://docs.google.com/presentation/d/1_snMZsUheySffuCqZokMO4uP_4ONn5ZR/edit?usp=sharing&rtpof=true&sd=true)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+
+<br/>
+
+**📊 [Click here to view the Project Presentation (PPT)](https://docs.google.com/presentation/d/1_snMZsUheySffuCqZokMO4uP_4ONn5ZR/edit?usp=sharing&rtpof=true&sd=true)**
 
 </div>
 
@@ -306,3 +311,5 @@ node -c src/main/features/system/systemActions.js
 
 > ### 🚀 Special Dedication
 > **This project is specially made for : Hackwave 3.0**
+> 
+> 📊 **Project Presentation (PPT)**: [View Presentation on Google Slides](https://docs.google.com/presentation/d/1_snMZsUheySffuCqZokMO4uP_4ONn5ZR/edit?usp=sharing&rtpof=true&sd=true)
