@@ -5,6 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { exec } = require('child_process');
+let shell = null;
+try {
+  shell = require('electron').shell;
+} catch (_) {}
+const contactsService = require('../contacts/contactsService');
 
 // ==================== 🛡️ 3-TIER PERMISSION SYSTEM ====================
 const PERMISSION_TIERS = {
@@ -366,26 +371,64 @@ async function deleteFileOrFolder({ name, targetFolder = '', confirmed = false }
 
 // 7. Compose Email Deep-Link (Gmail Web)
 async function composeEmail(target, subject = '', body = '') {
-  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(target)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  const res = await runPowerShell(`start "${url}"`);
+  const contact = contactsService.getPhoneForContact(target);
+  const emailAddress = (contact && contact.email) ? contact.email : target;
+
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(emailAddress)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  try {
+    if (shell && shell.openExternal) {
+      await shell.openExternal(url);
+    } else {
+      await runPowerShell(`start "${url}"`);
+    }
+  } catch (_) {
+    await runPowerShell(`start "${url}"`);
+  }
   return {
-    ok: res.ok,
-    command: `Gmail: "${target}"`,
-    description: `Opened Gmail compose window for **${target}**.`
+    ok: true,
+    command: `Gmail: "${emailAddress}"`,
+    description: `Opened Gmail compose window for **${emailAddress}**.`
   };
 }
 
 // 8. WhatsApp Deep-Link Chat Launcher
 async function openWhatsAppChat(contactName, message = '') {
-  // If contact phone is supplied, open direct whatsapp:// protocol link
-  if (/^\+?\d+$/.test(contactName.replace(/\s+/g, ''))) {
-    const cleanPhone = contactName.replace(/[^\d\+]/g, '');
-    const url = `whatsapp://send?phone=${cleanPhone}${message ? '&text=' + encodeURIComponent(message) : ''}`;
-    const res = await runPowerShell(`start "${url}"`);
-    return { ok: res.ok, description: `Opened WhatsApp chat with **${cleanPhone}**.` };
+  // 1. Check if contact exists in local Directory
+  const contact = contactsService.getPhoneForContact(contactName);
+  if (contact && contact.phone) {
+    const url = `whatsapp://send?phone=${contact.phone}${message ? '&text=' + encodeURIComponent(message) : ''}`;
+    try {
+      if (shell && shell.openExternal) {
+        await shell.openExternal(url);
+      } else {
+        await runPowerShell(`start "${url}"`);
+      }
+    } catch (_) {
+      await runPowerShell(`start "${url}"`);
+    }
+    return {
+      ok: true,
+      description: `Opened WhatsApp chat with **${contact.displayName}**${message ? ' with message: "' + message + '"' : ''}.`
+    };
   }
 
-  // Search WhatsApp UI via WScript keystrokes
+  // 1.5. If contact phone is directly supplied as digits
+  if (/^\+?\d+$/.test(contactName.replace(/[\s\-\(\)]/g, ''))) {
+    const cleanPhone = contactsService.normalizePhone(contactName);
+    const url = `whatsapp://send?phone=${cleanPhone}${message ? '&text=' + encodeURIComponent(message) : ''}`;
+    try {
+      if (shell && shell.openExternal) {
+        await shell.openExternal(url);
+      } else {
+        await runPowerShell(`start "${url}"`);
+      }
+    } catch (_) {
+      await runPowerShell(`start "${url}"`);
+    }
+    return { ok: true, description: `Opened WhatsApp chat with **${cleanPhone}**.` };
+  }
+
+  // 2. UI Automation Fallback: Open WhatsApp Desktop App and search contact via WScript keystrokes
   const psScript = `
     $ws = New-Object -ComObject WScript.Shell
     $ws.AppActivate('WhatsApp')

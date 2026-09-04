@@ -149,10 +149,9 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
 
       if (taskCategory === 'fastpath_whatsapp') {
         if (onStatusUpdate) onStatusUpdate('FahOS is preparing WhatsApp...');
-        const toMatch = userPrompt.match(/(?:to|with|contact)\s+([^\s,]+)(?:\s+(?:saying|that|message)\s+(.*))?/i);
-        const waMatch = userPrompt.match(/^(?:(?:open\s+)?whatsapp\s+(?:and\s+)?(?:send\s+(?:a\s+)?message\s+)?|send\s+(?:a\s+)?(?:whatsapp\s+)?message\s+(?:saying\s+|that\s+|to\s+say\s+)?)(.*)$/i);
-        const contact = toMatch ? toMatch[1].trim() : '';
-        const text = (toMatch && toMatch[2] ? toMatch[2] : (waMatch ? waMatch[1] : userPrompt)).trim();
+        const waData = this.router.extractWhatsAppMessage(userPrompt);
+        const contact = waData ? waData.contact : '';
+        const text = waData ? waData.message : '';
 
         let res;
         if (contact && !/^(?:message|chat)$/i.test(contact)) {
@@ -197,11 +196,10 @@ EVERY single response MUST follow this clean, natural, human-readable structure:
 
       if (taskCategory === 'fastpath_email') {
         if (onStatusUpdate) onStatusUpdate('FahOS is opening email compose...');
-        const emailMatch = userPrompt.match(/^(?:compose\s+(?:an?\s+)?email|send\s+(?:an?\s+)?email|email)\s+(?:to\s+)?([^\s,]+)(?:\s+(?:with\s+subject|subject)\s+['"]?([^'"]+?)['"]?)?(?:\s+(?:and\s+body|body|saying|with\s+message)\s+(.+))?$/i);
-        const target = emailMatch ? emailMatch[1].trim() : '';
-        const subject = emailMatch && emailMatch[2] ? emailMatch[2].trim() : '';
-        const body = emailMatch && emailMatch[3] ? emailMatch[3].trim() : '';
-        const res = await systemActions.composeEmail(target || 'someone@example.com', subject, body);
+        const emailData = this.router.extractEmailCompose(userPrompt);
+        const target = emailData ? emailData.target : '';
+        const subject = emailData && emailData.details ? emailData.details : '';
+        const res = await systemActions.composeEmail(target || 'someone@example.com', subject);
         return {
           success: res.ok,
           answerText: res.description

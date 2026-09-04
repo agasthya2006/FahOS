@@ -66,7 +66,7 @@ class ModelRouter {
       }
 
       // 5. WhatsApp Message
-      if (/^(?:(?:open\s+)?whatsapp\s+(?:and\s+)?(?:send\s+(?:a\s+)?message\s+)?|send\s+(?:a\s+)?(?:whatsapp\s+)?message\s+(?:saying\s+|that\s+|to\s+say\s+)?).+$/i.test(trimmed)) {
+      if (this.extractWhatsAppMessage(trimmed)) {
         return 'fastpath_whatsapp';
       }
 
@@ -81,7 +81,7 @@ class ModelRouter {
       }
 
       // 8. Compose Email Deep-Link
-      if (/^(?:compose\s+(?:an?\s+)?email|send\s+(?:an?\s+)?email|email)\s+(?:to\s+)?.+$/i.test(trimmed)) {
+      if (this.extractEmailCompose(trimmed)) {
         return 'fastpath_email';
       }
 
@@ -104,6 +104,60 @@ class ModelRouter {
       return 'simple';
     }
     return 'complex';
+  }
+
+  extractWhatsAppMessage(rawText) {
+    let text = String(rawText || '').trim().replace(/[\.\?!,;]+$/, '').trim();
+    if (!text) return null;
+
+    // Ignore informational queries (e.g. "what is whatsapp")
+    if (/^(?:tell\s+me|what\s+is|how\s+to|explain)\b/i.test(text)) return null;
+
+    // Has explicit whatsapp mention?
+    const hasExplicitWhatsApp = /what?ts?app/i.test(text);
+
+    // Clean optional trailing platform indicators e.g. "send hi to akhil on whatsapp"
+    let cleanText = text.replace(/\s+(?:on|via|in)\s+what?ts?app$/i, '').trim();
+
+    const waPrefix = '^(?:(?:start|open|then|in|go\\s+to)\\s+what?ts?app\\s+(?:and\\s+)?)';
+
+    // Pattern 1: open whatsapp and send <msg> to <contact> (or "send <msg> to <contact> on whatsapp")
+    if (hasExplicitWhatsApp) {
+      let m = cleanText.match(new RegExp(`(?:${waPrefix})?send\\s+(?:a\\s+)?(?:what?ts?app\\s+)?(?:message|msg|text)?\\s*([a-zA-Z0-9_\\s\\+]+?)\\s+to\\s+([a-zA-Z0-9_\\s\\+]+)$`, 'i'));
+      if (m && m[1] && m[2]) return { message: m[1].trim(), contact: m[2].trim() };
+
+      // Pattern 2: open whatsapp and send to <contact> <msg>
+      m = cleanText.match(new RegExp(`(?:${waPrefix})?send\\s+(?:a\\s+)?(?:message|msg|text\\s+)?to\\s+([a-zA-Z0-9_\\s\\+]+?)(?:\\s+(?:saying|that|with|texting)\\s+|\\s+)(.+)$`, 'i'));
+      if (m && m[1] && m[2]) return { contact: m[1].trim(), message: m[2].trim() };
+
+      // Pattern 3: whatsapp <contact> saying <msg>
+      m = cleanText.match(/^what?ts?app\s+([a-zA-Z0-9_\+]+)(?:\s+(?:saying|that|with|texting)\s+|\s*:\s*|\s+)(.+)$/i);
+      if (m && m[1] && m[2]) return { contact: m[1].trim(), message: m[2].trim() };
+
+      // Pattern 4: just open whatsapp and send message (empty contact / message)
+      if (/^(?:(?:open|launch|start)\s+what?ts?app(?:\s+(?:and\s+)?send\s+(?:a\s+)?message)?|what?ts?app)$/i.test(text)) {
+        return { contact: '', message: '' };
+      }
+    }
+
+    return null;
+  }
+
+  extractEmailCompose(rawText) {
+    let text = String(rawText || '').trim().replace(/[\.\?!,;]+$/, '').trim();
+    if (!text) return null;
+
+    if (/^(?:tell\s+me|what\s+is|how\s+to|explain)\b/i.test(text)) return null;
+
+    const mailPrefix = '^(?:(?:start|open|go\\s+to|launch|in)\\s+(?:gmail|mail|email)\\s+(?:and\\s+)?)?';
+
+    // Pattern: (open gmail and)? (compose/send/write) email to <target> about <details>
+    let m = text.match(new RegExp(`${mailPrefix}(?:compose|send|write|draft)\\s+(?:an?\\s+)?(?:email|mail|message)?\\s*(?:to\\s+)?([a-zA-Z0-9_\\s\\.\\+@]+?)(?:\\s+(?:about|subject|saying|with|body)\\s+(.+))?$`, 'i'));
+    if (m && m[1] && !/^(gmail|email|mail)$/i.test(m[1].trim())) {
+      return { target: m[1].trim(), details: m[2] ? m[2].trim() : '' };
+    }
+
+    return null;
   }
 
   isWindowsCommand(prompt) {

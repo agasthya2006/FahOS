@@ -77,4 +77,15 @@ function getAllContacts() {
   return Object.values(loadContacts());
 }
 
-module.exports = { saveContact, deleteContact, getAllContacts, normalizePhone };
+function getPhoneForContact(name) {
+  const contacts = loadContacts();
+  const target = normalizeName(name);
+  for (const k in contacts) {
+    if (k === target || normalizeName(contacts[k].displayName) === target) {
+      return contacts[k];
+    }
+  }
+  return null;
+}
+
+module.exports = { saveContact, deleteContact, getAllContacts, normalizePhone, getPhoneForContact, getContactByName: getPhoneForContact };
