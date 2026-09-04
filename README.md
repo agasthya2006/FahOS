@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/logo.png" alt="FahOS Logo" width="130" height="130" style="border-radius: 28px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);" />
+
 # ✦ FahOS ✦
 ### Native Windows AI Operating Layer & Autonomous Desktop Agent
 *See → Understand → Act → Verify*
