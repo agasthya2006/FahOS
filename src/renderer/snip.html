@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FahOS Screen Snipper</title>
+  <link rel="stylesheet" href="snip.css">
+</head>
+<body>
+  <div id="snip-container">
+    <canvas id="snip-canvas"></canvas>
+
+    <!-- Top Floating Instruction Pill -->
+    <div id="instruction-pill">
+      <span class="snip-icon">✂</span>
+      <span>Drag to select screen region</span>
+      <span class="pill-divider">|</span>
+      <span class="key-badge">Enter</span> Confirm
+      <span class="pill-divider">|</span>
+      <span class="key-badge">Esc</span> Cancel
+    </div>
+
+    <!-- Selection Dimension Badge -->
+    <div id="dim-badge" style="display: none;">0 × 0</div>
+
+    <!-- Floating Action Toolbar (Confirm / Cancel) -->
+    <div id="snip-toolbar" style="display: none;">
+      <button id="btn-confirm-snip" class="toolbar-btn btn-confirm">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        Confirm
+      </button>
+      <button id="btn-cancel-snip" class="toolbar-btn btn-cancel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <script src="snip.js"></script>
+</body>
+</html>

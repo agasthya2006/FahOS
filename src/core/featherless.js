@@ -23,7 +23,11 @@ class FeatherlessClient {
     return null;
   }
 
-  async chatCompletion({ model = 'meta-llama/Meta-Llama-3.1-70B-Instruct', messages, tools = null, temperature = 0.2 }) {
+  sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async chatCompletion({ model = 'Qwen/Qwen2.5-7B-Instruct', messages, tools = null, temperature = 0.3, max_tokens = 2048 }) {
     if (!this.apiKey) {
       console.warn('[Featherless] No API key set. Returning mock fallback structured plan.');
       return this.generateMockResponse(messages);
@@ -33,6 +37,7 @@ class FeatherlessClient {
       model,
       messages,
       temperature,
+      max_tokens
     };
 
     if (tools && Array.isArray(tools) && tools.length > 0) {
@@ -40,27 +45,62 @@ class FeatherlessClient {
       payload.tool_choice = 'auto';
     }
 
-    try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+    const maxAttempts = 3;
+    let lastError = null;
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Featherless API Error ${response.status}: ${errText}`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+      try {
+        const response = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errText = await response.text();
+          const is429 = response.status === 429 || errText.includes('concurrency_limit_exceeded');
+
+          if (is429 && attempt < maxAttempts) {
+            const backoffMs = attempt * 1500;
+            console.warn(`[Featherless Client] 429 Concurrency Limit on ${model} (attempt ${attempt}/${maxAttempts}). Waiting ${backoffMs}ms before retrying...`);
+            await this.sleep(backoffMs);
+            continue;
+          }
+
+          throw new Error(`Featherless API Error ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        return data.choices[0].message;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          lastError = new Error(`Featherless API Request Timed Out after 45s (Model: ${model})`);
+        } else {
+          lastError = error;
+        }
+
+        if (attempt < maxAttempts && !error.message?.includes('Timed Out')) {
+          const backoffMs = attempt * 1200;
+          console.warn(`[Featherless Client Error]: ${error.message}. Retrying in ${backoffMs}ms...`);
+          await this.sleep(backoffMs);
+        } else {
+          break;
+        }
       }
-
-      const data = await response.json();
-      return data.choices[0].message;
-    } catch (error) {
-      console.error('[Featherless Client Error]:', error.message);
-      throw error;
     }
+
+    console.error('[Featherless Client Final Failure]:', lastError?.message);
+    throw lastError;
   }
 
   generateMockResponse(messages) {

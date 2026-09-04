@@ -1,4 +1,4 @@
-const { app, BrowserWindow, globalShortcut, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, globalShortcut, screen, ipcMain, desktopCapturer } = require('electron');
 const path = require('path');
 const AgentEngine = require('../agent/agent');
 
@@ -6,6 +6,7 @@ const AgentEngine = require('../agent/agent');
 app.disableHardwareAcceleration();
 
 let hudWindow = null;
+let snipWindow = null;
 let agentEngine = null;
 
 const DEFAULT_WIDTH = 470;
@@ -51,6 +52,44 @@ function createHUDWindow() {
   hudWindow.setAlwaysOnTop(true, 'floating', 1);
 }
 
+function createSnipWindow() {
+  if (snipWindow) {
+    snipWindow.destroy();
+    snipWindow = null;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.bounds;
+
+  snipWindow = new BrowserWindow({
+    width,
+    height,
+    x: 0,
+    y: 0,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    alwaysOnTop: true,
+    fullscreen: true,
+    skipTaskbar: true,
+    resizable: false,
+    enableLargerThanScreen: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false
+    }
+  });
+
+  snipWindow.loadFile(path.join(__dirname, '../renderer/snip.html'));
+  snipWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  snipWindow.on('closed', () => {
+    snipWindow = null;
+  });
+}
+
 function registerGlobalShortcuts() {
   const toggleVisibility = () => {
     if (!hudWindow) return;
@@ -69,10 +108,10 @@ function registerGlobalShortcuts() {
 
   // Ctrl + Shift + M for Screen Snipping
   globalShortcut.register('CommandOrControl+Shift+M', () => {
-    if (hudWindow) {
-      hudWindow.show();
-      hudWindow.webContents.send('trigger-snip');
-    }
+    if (hudWindow) hudWindow.hide();
+    setTimeout(() => {
+      createSnipWindow();
+    }, 100);
   });
 }
 
@@ -100,13 +139,84 @@ function setupIPC() {
     hudWindow.setBounds({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
   });
 
-  ipcMain.on('user-send-message', async (event, message) => {
-    console.log('[Backend Server] Received Command:', message);
+  // Screen Snipping Overlay Controls
+  ipcMain.on('trigger-snip-start', () => {
+    if (hudWindow) hudWindow.hide();
+    setTimeout(() => {
+      createSnipWindow();
+    }, 100);
+  });
+
+  ipcMain.on('snip-cancel', () => {
+    if (snipWindow) {
+      snipWindow.close();
+      snipWindow = null;
+    }
+    if (hudWindow) {
+      hudWindow.show();
+      hudWindow.focus();
+    }
+  });
+
+  ipcMain.on('snip-confirm', async (event, bounds) => {
+    try {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const scaleFactor = primaryDisplay.scaleFactor || 1;
+      const { width, height } = primaryDisplay.bounds;
+
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {
+          width: Math.round(width * scaleFactor),
+          height: Math.round(height * scaleFactor)
+        }
+      });
+
+      const primarySource = sources[0];
+      if (primarySource && primarySource.thumbnail) {
+        const croppedImage = primarySource.thumbnail.crop({
+          x: Math.round(bounds.x * scaleFactor),
+          y: Math.round(bounds.y * scaleFactor),
+          width: Math.round(bounds.width * scaleFactor),
+          height: Math.round(bounds.height * scaleFactor)
+        });
+
+        const dataUrl = croppedImage.toDataURL();
+
+        if (snipWindow) {
+          snipWindow.close();
+          snipWindow = null;
+        }
+
+        if (hudWindow) {
+          hudWindow.show();
+          hudWindow.focus();
+          hudWindow.webContents.send('snip-captured', dataUrl);
+        }
+      }
+    } catch (err) {
+      console.error('[Snip Capture Error]:', err.message);
+      if (snipWindow) {
+        snipWindow.close();
+        snipWindow = null;
+      }
+      if (hudWindow) {
+        hudWindow.show();
+        hudWindow.focus();
+      }
+    }
+  });
+
+  ipcMain.on('user-send-message', async (event, payload) => {
+    const message = typeof payload === 'string' ? payload : payload.message;
+    const imageBase64 = typeof payload === 'object' ? payload.imageBase64 : null;
+
+    console.log('[Backend Server] Received Command:', message, imageBase64 ? '(with Image Attachment)' : '');
     if (hudWindow) {
       hudWindow.webContents.send('agent-status-update', 'Analyzing context...');
     }
 
-    const result = await agentEngine.processUserPrompt(message, (statusText) => {
+    const result = await agentEngine.processUserPrompt(message, imageBase64, (statusText) => {
       if (hudWindow) {
         hudWindow.webContents.send('agent-status-update', statusText);
       }

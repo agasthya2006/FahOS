@@ -4,8 +4,8 @@ class ModelRouter {
   constructor() {
     this.client = new FeatherlessClient();
     this.models = {
-      complex: 'Qwen/Qwen2.5-72B-Instruct',
-      vision: 'Qwen/Qwen2-VL-72B-Instruct',
+      complex: 'Qwen/Qwen2.5-14B-Instruct',
+      vision: 'Qwen/Qwen2.5-VL-3B-Instruct',
       simple: 'Qwen/Qwen2.5-7B-Instruct',
       coding: 'Qwen/Qwen2.5-Coder-32B-Instruct',
       whisper: 'whisper-1'
@@ -41,10 +41,21 @@ class ModelRouter {
         tools
       });
     } catch (err) {
-      console.warn(`[Model Router] Primary model ${selectedModel} failed (${err.message}). Retrying with Qwen/Qwen2.5-7B-Instruct...`);
+      console.warn(`[Model Router] Primary model ${selectedModel} failed (${err.message}). Retrying with fast model Qwen/Qwen2.5-7B-Instruct after 1500ms delay...`);
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Sanitize messages for text-only fallback model if multimodal payload was sent
+      const cleanMessages = messages.map(m => {
+        if (Array.isArray(m.content)) {
+          const textObj = m.content.find(c => c.type === 'text');
+          return { ...m, content: textObj ? textObj.text : 'Analyze context' };
+        }
+        return m;
+      });
+
       return await this.client.chatCompletion({
         model: 'Qwen/Qwen2.5-7B-Instruct',
-        messages,
+        messages: cleanMessages,
         tools
       });
     }

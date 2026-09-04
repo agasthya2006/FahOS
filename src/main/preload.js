@@ -5,9 +5,13 @@ contextBridge.exposeInMainWorld('fahosAPI', {
   minimizeHUD: () => ipcRenderer.send('minimize-hud'),
   resetHUDSize: () => ipcRenderer.send('reset-hud-size'),
   resizeHUDHeight: (targetHeight) => ipcRenderer.send('resize-hud-height', targetHeight),
-  sendMessage: (msg) => ipcRenderer.send('user-send-message', msg),
+  sendMessage: (msg, imageBase64 = null) => ipcRenderer.send('user-send-message', { message: msg, imageBase64 }),
+  startSnip: () => ipcRenderer.send('trigger-snip-start'),
+  cancelSnip: () => ipcRenderer.send('snip-cancel'),
+  confirmSnip: (bounds) => ipcRenderer.send('snip-confirm', bounds),
   onFocusInput: (callback) => ipcRenderer.on('focus-input', callback),
   onTriggerSnip: (callback) => ipcRenderer.on('trigger-snip', callback),
+  onSnipCaptured: (callback) => ipcRenderer.on('snip-captured', callback),
   onAgentStatusUpdate: (callback) => ipcRenderer.on('agent-status-update', callback),
   onAgentResponse: (callback) => ipcRenderer.on('agent-response', callback)
 });

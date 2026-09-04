@@ -65,6 +65,20 @@
 
     <!-- Body Command Input & Expandable Response Area -->
     <main class="hud-body">
+      <!-- Screen Snip Attachment Preview Card -->
+      <div class="snip-preview-container" id="snip-preview-container" style="display: none;">
+        <div class="snip-preview-card">
+          <img id="snip-thumbnail" class="snip-thumbnail" alt="Snip Preview" />
+          <div class="snip-info">
+            <span class="snip-badge">✂ Screen Snip Attached</span>
+            <span class="snip-hint">FahOS Vision Ready</span>
+          </div>
+          <button id="btn-remove-snip" class="snip-remove-btn" title="Remove attachment">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
       <div class="input-wrapper">
         <input 
           type="text" 

@@ -3,9 +3,18 @@ const ModelRouter = require('../core/router');
 class AgentEngine {
   constructor() {
     this.router = new ModelRouter();
-    this.systemPrompt = `You are FahOS V2, an intelligent AI operating layer and assistant for Windows.
-Respond directly, clearly, and conversationally in plain, friendly text.
-Do NOT append raw JSON blocks or technical JSON schemas to your conversational answers.`;
+    this.systemPrompt = `You are FahOS V2, an advanced AI operating system assistant and expert knowledge layer for Windows.
+
+Guiding Principles for Responses:
+1. When asked complex, technical, tech stack, or explanatory questions ("explain X", "what is techstack", "how does Y work", "explain about MCP"):
+   - Provide a comprehensive, detailed, well-structured, in-depth explanation.
+   - Structure sections cleanly using standard Markdown headings (### Section Title), bold text (**term**), bullet points (- point), and Markdown Tables (| Header 1 | Header 2 |).
+   - When presenting tables, always use standard GitHub Markdown Pipe Table syntax (| Header 1 | Header 2 |\n|---|---|\n| Data 1 | Data 2 |). Never output raw ASCII grid borders (+---+---+) or dashed text blocks (----+----).
+   - Ensure headings are clean, elegant, and readable without nested hash clutter (e.g. use ### instead of #### or #####).
+   - Never ask lazy clarifying questions when you can provide a complete, detailed breakdown immediately.
+2. For simple greetings or basic queries ("hii", "thanks"):
+   - Respond concisely and helpfully.
+3. Output ONLY clean human-readable response text. Do NOT append raw JSON blocks or technical schemas.`;
   }
 
   cleanOutputText(rawText) {
@@ -32,17 +41,22 @@ Do NOT append raw JSON blocks or technical JSON schemas to your conversational a
     return text || rawText;
   }
 
-  async processUserPrompt(userPrompt, onStatusUpdate = null) {
-    console.log(`[Agent Engine] Processing Prompt: "${userPrompt}"`);
+  async processUserPrompt(userPrompt, imageBase64 = null, onStatusUpdate = null) {
+    console.log(`[Agent Engine] Processing Prompt: "${userPrompt}"`, imageBase64 ? '(Vision Task)' : '');
 
-    const taskCategory = this.router.classifyTask(userPrompt);
+    const taskCategory = this.router.classifyTask(userPrompt, !!imageBase64);
     const selectedModel = this.router.selectModel(taskCategory);
 
     if (onStatusUpdate) onStatusUpdate(`SEE: Routing to [${taskCategory.toUpperCase()}] -> ${selectedModel.split('/')[1] || selectedModel}`);
 
+    const userContent = imageBase64 ? [
+      { type: 'text', text: userPrompt || 'Analyze this screen snippet in detail.' },
+      { type: 'image_url', image_url: { url: imageBase64 } }
+    ] : userPrompt;
+
     const messages = [
       { role: 'system', content: this.systemPrompt },
-      { role: 'user', content: userPrompt }
+      { role: 'user', content: userContent }
     ];
 
     if (onStatusUpdate) onStatusUpdate(`UNDERSTAND: Querying Featherless.ai...`);
