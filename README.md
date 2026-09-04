@@ -10,6 +10,7 @@
 [![Electron: 31.x](https://img.shields.io/badge/Electron-31.x-47848F?logo=electron)](https://electronjs.org)
 [![Featherless AI](https://img.shields.io/badge/Featherless%20AI-Qwen%202.5-8A2BE2)](https://featherless.ai)
 [![Google Gemini](https://img.shields.io/badge/Google-Gemini%20Flash-4285F4?logo=google)](https://aistudio.google.com)
+[![Architecture: Blueprint](https://img.shields.io/badge/Architecture-System%20Blueprint-00E5FF)](ARCHITECTURE.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>
@@ -24,7 +25,7 @@
 
 ## 🔄 Total Workflow: How Featherless AI and Google Work Together
 
-FahOS adopts a specialized dual-engine architecture where each AI engine excels at its core strength:
+FahOS adopts a specialized multi-engine architecture where each AI engine excels at its core strength. Detailed technical specifications, data models, and sequence flows are documented in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ```mermaid
 flowchart TD
@@ -52,9 +53,10 @@ flowchart TD
         D4["Featherless AI Qwen2.5-7B<br/>(General Tasks & Fast Chat)"]
     end
 
-    subgraph Execution["5. Windows System Execution"]
-        E1["System Actions Engine<br/>• App Launching (VS Code, Chrome, etc.)<br/>• File Explorer & Folder Navigation<br/>• YouTube & Spotify Playback<br/>• Media & Audio Controls"]
-        E2["Collapsible Chat History & UI Feedback"]
+    subgraph Execution["5. Windows System & Browser Execution"]
+        E1["System Actions Engine<br/>• App Lifecycle (VS Code, Notepad, etc.)<br/>• File Explorer & Folder Navigation<br/>• Safe Recycle Bin Deletion<br/>• Native Audio & Media Controls"]
+        E2["🌐 Autonomous Unified Browser Engine<br/>• 94% Display Size Rounded Window<br/>• Real-Time Step HUD & Element Highlighting<br/>• Multi-Platform Extraction (YouTube, Wikipedia, Amazon, Google)<br/>• Gemini 3.1 Flash-Lite Factual Synthesizer"]
+        E3["Collapsible Chat History & UI Feedback"]
     end
 
     %% Voice flow
@@ -69,12 +71,15 @@ flowchart TD
     D1 -->|Coding & Shell| D2
     D1 -->|Complex Reasoning| D3
     D1 -->|General Queries| D4
+    D1 -->|Web / Search / Lookups| E2
+    D1 -->|Local System Tasks| E1
 
     %% Action & Response
     D2 --> E1
     D3 --> E1
     D4 --> E1
-    E1 --> E2
+    E1 --> E3
+    E2 --> E3
 ```
 
 ### 1. The Voice Pipeline (Option 2 Architecture)
@@ -95,11 +100,23 @@ flowchart TD
   - `Qwen/Qwen2.5-7B-Instruct` for rapid conversational responses and formatting.
 - **System Actions**: Directly launches native Windows applications, opens file directories, runs searches, and controls media.
 
+### 4. Autonomous Unified Browser Engine
+- **94% Large-Screen Viewport**: Opens in a dedicated 94% display width window (`agentBrowserWindow.js`) with an interactive real-time Step HUD.
+- **Autonomous Navigation**: Automatically identifies target platforms (YouTube, Google, Wikipedia, Amazon, GitHub, Reddit), highlights search bars in amber, types queries, and navigates results.
+- **Factual Extraction**: Highlights top results in emerald and leverages **Gemini 3.1 Flash-Lite** to extract exact factual answers directly from live page text.
+- **Full Architecture Blueprint**: Read the comprehensive component and sequence diagrams in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
+
 ---
 
 ## ✨ Features
 
 - 💎 **Spatial Glassmorphism HUD**: Floating translucent interface that stays out of your way and summons instantly.
+- 🌐 **Autonomous Unified Web Browser**:
+  - 94% display size spacious window with vertical-locked geometry.
+  - Live frosted glass Step HUD with dynamic domain badges (`GOOGLE.COM`, `YOUTUBE.COM`, `AMAZON.IN`, `WIKIPEDIA.ORG`).
+  - Active model badge (`⚡ GEMINI 3.1 FLASH-LITE`).
+  - Real-time DOM element highlighting (search bars, top result cards).
+  - Multi-platform extraction: video channels, view counts, product prices, ratings, and Wikipedia summaries.
 - 🎙️ **Voice Processing**: One-click recording with real-time waveform animation, Gemini audio transcription, and Featherless AI transcript cleanup.
 - 🖼️ **Attached Image Snippet Pill**: Snips attach cleanly inside the chat box with live preview thumbnails and instant removal.
 - ⚡ **Fastpath System Automation**:
@@ -123,38 +140,49 @@ The project is structured logically into modular layers:
 
 ```
 FahOS/
-├── .env                     # Local environment variables (API keys)
-├── .env.example             # Example environment configuration
-├── package.json             # Electron & project manifest
-├── README.md                # Project documentation
+├── ARCHITECTURE.md                  # Comprehensive system architecture & sequence blueprint
+├── README.md                        # Project documentation & quickstart
+├── package.json                     # Electron & project manifest
+├── .env.example                     # Example environment configuration
+│
+├── browser-service/                 # Optional Python FastAPI Playwright microservice (:8484)
+│   ├── main.py                      # FastAPI server endpoints
+│   ├── agent.py                     # Playwright & browser-use autonomous logic
+│   ├── browser_manager.py           # Chromium instance manager
+│   ├── task_manager.py              # Background task lifecycle manager
+│   └── start.bat                    # Microservice launcher
 │
 └── src/
     ├── agent/
-    │   └── agent.js         # Core AgentEngine: integrates router, Featherless, vision, and system actions
+    │   └── agent.js                 # Central AgentEngine orchestrator
     │
     ├── core/
-    │   ├── featherless.js    # Featherless AI client (chat completions, retries, model calls)
-    │   ├── router.js         # ModelRouter: prompt intent classification & model assignment
-    │   ├── system_actions.js # Native Windows OS actions (app execution, folders, media)
-    │   ├── vision_sensor.js  # Google Gemini vision sensor for analyzing snips
-    │   └── voice_service.js  # Audio transcription (Gemini) + Featherless transcript refiner
+    │   ├── featherless.js           # Featherless AI client (Qwen 2.5 cluster)
+    │   ├── router.js                # ModelRouter & 0ms fast-path intent classifier
+    │   ├── system_actions.js        # Native Windows OS actions (app execution, folders, media)
+    │   ├── vision_sensor.js         # Google Gemini vision sensor for analyzing snips
+    │   └── voice_service.js         # Audio transcription (Gemini) + Featherless transcript refiner
     │
     ├── main/
-    │   ├── main.js          # Electron main process (window management, shortcuts, IPC handlers)
-    │   ├── preload.js       # Secure contextBridge API exposing window.fahosAPI
+    │   ├── main.js                  # Electron main process (window management, shortcuts, IPC handlers)
+    │   ├── preload.js               # Secure contextBridge API exposing window.fahosAPI
     │   └── features/
+    │       ├── browser/
+    │       │   ├── agentBrowserWindow.js     # 94% large-screen window manager & IPC
+    │       │   ├── agentBrowserController.js # Autonomous navigation & Gemini 3.1 extraction
+    │       │   └── agentBrowserPreload.js    # Webview isolation bridge
     │       └── system/
-    │           └── systemActions.js # Modular Windows automation engine (app open/close, recycle bin, web app fallback)
+    │           └── systemActions.js          # Extended Windows automation engine
     │
     └── renderer/
-        ├── index.html       # Floating HUD main interface
-        ├── styles.css       # Glassmorphism styling, animations, history collapse masks
-        ├── app.js           # Main UI logic (chat, voice recording, snip pill, history toggle)
-        ├── snip.html        # Crosshair screen snipper overlay HTML
-        ├── snip.css         # Full-screen snipping canvas styling
-        ├── snip.js          # Coordinate tracking, selection box, and canvas image crop
-        └── assets/
-            └── logo.png     # FahOS brand asset
+        ├── index.html               # Floating HUD main interface
+        ├── styles.css               # Glassmorphism styling, animations, history collapse masks
+        ├── app.js                   # Main UI logic (chat, voice recording, snip pill, history toggle)
+        ├── snip.html / .css / .js   # Screen snipping overlay
+        └── browser/
+            ├── agentBrowser.html    # Autonomous browser viewport & HUD layout
+            ├── agentBrowser.css     # Large-screen HUD styling & emerald badges
+            └── agentBrowser.js      # Browser HUD controller & step listeners
 ```
 
 ---
