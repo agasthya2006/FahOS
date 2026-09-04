@@ -4,8 +4,8 @@ class ModelRouter {
   constructor() {
     this.client = new FeatherlessClient();
     this.models = {
-      complex: 'Qwen/Qwen2.5-14B-Instruct',
-      vision: 'Qwen/Qwen2.5-VL-3B-Instruct',
+      complex: 'Qwen/Qwen2.5-32B-Instruct',
+      vision: 'Qwen/Qwen2.5-VL-7B-Instruct',
       simple: 'Qwen/Qwen2.5-7B-Instruct',
       coding: 'Qwen/Qwen2.5-Coder-32B-Instruct',
       whisper: 'whisper-1'
@@ -35,7 +35,7 @@ class ModelRouter {
     console.log(`[Model Router] Selected Model: ${selectedModel} for Task Category: ${taskType}`);
 
     if (taskType === 'vision') {
-      const visionModels = ['Qwen/Qwen2.5-VL-3B-Instruct', 'Qwen/Qwen2.5-VL-7B-Instruct'];
+      const visionModels = ['Qwen/Qwen2.5-VL-7B-Instruct', 'Qwen/Qwen2.5-VL-3B-Instruct'];
       let lastVisionErr = null;
 
       for (const visionModel of visionModels) {
@@ -48,7 +48,7 @@ class ModelRouter {
           });
         } catch (err) {
           lastVisionErr = err;
-          console.warn(`[Model Router Vision Pool] ${visionModel} failed (${err.message}). Retrying in 2000ms...`);
+          console.warn(`[Model Router Vision Pool] ${visionModel} failed (${err.message}). Retrying next vision model in 2000ms...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }

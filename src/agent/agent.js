@@ -56,6 +56,7 @@ Guiding Principles for Responses:
     let messages;
     if (imageBase64) {
       messages = [
+        { role: 'system', content: this.systemPrompt },
         {
           role: 'user',
           content: [
