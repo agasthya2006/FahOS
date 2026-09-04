@@ -67,9 +67,8 @@ Your response MUST follow this clean, human-readable structure:
     };
 
     const modelEndpoints = [
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent',
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent'
     ];
 
@@ -89,9 +88,9 @@ Your response MUST follow this clean, human-readable structure:
           if (!response.ok) {
             const errText = await response.text();
             console.warn(`[VisionSensor ${modelName} ${response.status}]:`, errText.slice(0, 200));
-            // On quota 429, immediately break and switch to next model without waiting
-            if (response.status === 429) {
-              console.warn(`[VisionSensor] 429 Quota on ${modelName}, immediately switching to next model...`);
+            // On 404 or 429, immediately break and switch to next model
+            if (response.status === 404 || response.status === 429) {
+              console.warn(`[VisionSensor] ${response.status} on ${modelName}, immediately switching to next model...`);
               break;
             }
             if (response.status === 503 && attempt < 2) {
