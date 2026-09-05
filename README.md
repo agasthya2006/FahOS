@@ -33,7 +33,34 @@ Unlike generic chatbots, FahOS is directly wired to the operating system:
 
 ---
 
-## 2. System Architecture
+## 2. Technology Stack
+
+| Layer / Subsystem | Technology | Version / Model | Role in FahOS |
+|---|---|---|---|
+| **Desktop Application Framework** | [Electron](https://www.electronjs.org/) | `^31.0.0` | Cross-platform desktop runtime, multi-window lifecycle management, transparent frameless HUD overlay, secure IPC bridges |
+| **Frontend & Presentation** | Vanilla JavaScript (ES6+), HTML5, CSS3 | Native Web Standards | Zero-dependency glassmorphism UI, CSS custom property design tokens, dynamic DOM manipulation, interactive waveform animations |
+| **Screen Snipping Engine** | HTML5 Canvas API + `desktopCapturer` | Native Electron API | Screen area selection, crosshair coordinate tracking, region cropping, and JPEG downscaling for visual analysis |
+| **Core Orchestration & Runtime** | [Node.js](https://nodejs.org/) | `>=18.0.0` | Main process business logic, intent routing engine, security argument escaping, and local OS bridge |
+| **Primary AI Reasoning Engine** | [Featherless AI](https://featherless.ai/) | `Qwen/Qwen2.5-32B-Instruct` | Deep multi-step task reasoning, strategic planning, and complex conversational problem-solving |
+| **Coding & Script Synthesis** | [Featherless AI](https://featherless.ai/) | `Qwen/Qwen2.5-Coder-32B-Instruct` | Specialized generation of verified PowerShell automation scripts and technical code snippets |
+| **Fast Conversational Chat** | [Featherless AI](https://featherless.ai/) | `Qwen/Qwen2.5-7B-Instruct` | High-speed, low-latency conversational responses for short queries (≤ 8 words) |
+| **Multimodal Vision Sensor** | [Google Gemini API](https://ai.google.dev/) | `gemini-3.5-flash` / `gemini-3.6-flash` | Visual screen capture analysis, code error diagnosis, diagram interpretation, and UI inspection |
+| **Speech-to-Text Transcription** | [Groq Cloud API](https://groq.com/) | `whisper-large-v3-turbo` | Ultra-fast cloud speech recognition for spoken natural language commands |
+| **Voice Processing & WAV Encoder** | Web Audio API + `MediaRecorder` | 16kHz Mono PCM WAV | In-browser audio recording, floating-point to 16-bit PCM conversion, and Featherless conversational filler cleanup |
+| **Autonomous Web Microservice** | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) | Python 3.10+ / FastAPI `>=0.110.0` | Asynchronous local background daemon (`http://127.0.0.1:8484`) managing autonomous browser tasks |
+| **Autonomous Browser Engine** | [browser-use](https://github.com/browser-use/browser-use) + [Playwright](https://playwright.dev/) | Chromium Automation | Automated browser navigation, visual DOM element highlighting (search bars, cards), and multi-platform extraction |
+| **In-Browser Webpage Synthesizer** | [Google Gemini API](https://ai.google.dev/) | `gemini-3.1-flash-lite` | Real-time extraction and factual synthesis directly from rendered webpage DOM text |
+| **Data Schema & Model Validation** | [Pydantic](https://docs.pydantic.dev/) | `^2.6.0` (v2) | Strict schema validation, type enforcement, and serialization for browser task APIs |
+| **Native Operating System Shell** | Windows PowerShell + .NET CLI | PowerShell 5.1+ / Windows 10 & 11 | Direct process execution, application launching, task termination (`taskkill`), and system status checks |
+| **Hardware & Media Automation** | Windows Script Host (`WScript.Shell`) | Windows COM Automation | Native master volume step control, mute toggle, media play/pause, next/previous track, and workstation locking |
+| **Recycle Bin Safe Deleter** | Microsoft VisualBasic FileIO | `Microsoft.VisualBasic.dll` | Non-destructive file and folder deletions routed safely to the Windows Recycle Bin |
+| **OS Protocol Deep-Linking** | Electron `shell.openExternal` | Windows URI Protocol Handlers | Direct native application launching for `whatsapp://`, `spotify:`, `ms-settings:`, and Gmail web compose |
+| **Local Data Persistence** | Local-First JSON + `localStorage` | Flat JSON Files | Offline-first storage for Directory Mode contacts (`fahos_contacts.json`) and searchable chat history |
+| **Security & Sanitization** | Custom Sanitization Layer | FahOS `sanitize.js` | Strict single-quote shell escaping (`sanitizePowerShellArg`), path traversal protection (`sanitizeFileName`), and CSP |
+
+---
+
+## 3. System Architecture
 
 ```mermaid
 graph TB
@@ -89,7 +116,7 @@ graph TB
 
 ---
 
-## 3. Discovered Capabilities & Implementation Status
+## 4. Discovered Capabilities & Implementation Status
 
 | Feature | Category | Status | Description |
 |---------|----------|--------|-------------|
@@ -121,7 +148,7 @@ graph TB
 
 ---
 
-## 4. Installation & Getting Started
+## 5. Installation & Getting Started
 
 ### Prerequisites
 - **Windows 10 or 11 (64-bit)**
@@ -174,7 +201,7 @@ npm start
 
 ---
 
-## 5. Keyboard Shortcuts
+## 6. Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
@@ -185,7 +212,7 @@ npm start
 
 ---
 
-## 6. Example Natural Language Workflows
+## 7. Example Natural Language Workflows
 
 ### Operating System Controls (0ms Fast-Path)
 - `"open notepad and note down grocery list"`
@@ -213,7 +240,7 @@ npm start
 
 ---
 
-## 7. Security & Protection Model
+## 8. Security & Protection Model
 
 1. **PowerShell Argument Sanitization**: All shell parameters are strictly escaped using `sanitizePowerShellArg()` in `src/core/sanitize.js`, using single-quote literals to block variable expansion, subexpressions, and command chaining.
 2. **Safe Deletions**: File deletions are safely transferred to the Windows Recycle Bin using Microsoft VisualBasic FileIO rather than executing permanent disk removals.
@@ -223,7 +250,7 @@ npm start
 
 ---
 
-## 8. Repository Structure
+## 9. Repository Structure
 
 ```
 FahOS/
@@ -291,7 +318,7 @@ FahOS/
 
 ---
 
-## 9. Verification & Testing
+## 10. Verification & Testing
 
 Run the syntax and integrity test suite:
 ```bash
@@ -307,7 +334,7 @@ node -c src/main/features/system/systemActions.js
 
 ---
 
-## 10. Acknowledgements & Special Dedication
+## 11. Acknowledgements & Special Dedication
 
 > ### 🚀 Special Dedication
 > **This project is specially made for : Hackwave 3.0**
